@@ -1,0 +1,5 @@
+Single-line comment: // hello
+Multi-line comment: /*
+This is
+a multiline comment
+*/
