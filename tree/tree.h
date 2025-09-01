@@ -18,8 +18,11 @@ typedef enum NodeType
     NODETYPE_READ,
     NODETYPE_WRITE,
     NODETYPE_CONNECTOR,
-    NODETYPE_OPERATOR,
-    NODETYPE_ASSIGNMENT
+    NODETYPE_OP_ARITHMETIC,
+    NODETYPE_OP_ASSIGNMENT,
+    NODETYPE_OP_RELATIONAL,
+    NODETYPE_IF,
+    NODETYPE_WHILE
 } NodeType;
 
 typedef struct tnode
@@ -29,9 +32,9 @@ typedef struct tnode
     char *op;
     char *varname;
     NodeType nodetype;
-    struct tnode *left, *right;
+    struct tnode *left, *right, *middle;
 } tnode;
 
-tnode *createTree(int val, char *op, Type type, char *c, NodeType nodetype, tnode *l, tnode *r);
+tnode *createTree(int val, char *op, Type type, char *c, NodeType nodetype, tnode *l, tnode *m, tnode *r);
 
 #endif

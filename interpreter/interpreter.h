@@ -2,7 +2,7 @@
 #define INTERPRETER_H
 
 #include <stdio.h>
-#include "tree.h"
+#include "../tree/tree.h"
 
 void evaluate_tree(tnode *tree);
 int evaluate_expression(tnode *t);

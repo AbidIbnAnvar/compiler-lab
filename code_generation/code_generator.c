@@ -3,9 +3,10 @@
 #include "code_generator.h"
 #include <string.h>
 #include <stdbool.h>
-#include "helper.h"
+#include "../helper/helper.h"
 
 reg_index current_register = -1;
+int last_used_label = -1;
 
 reg_index getReg()
 {
@@ -17,6 +18,11 @@ reg_index freeReg()
     return --current_register;
 }
 
+int getLabel()
+{
+    return ++last_used_label;
+}
+
 reg_index codeGen(tnode *t)
 {
     if (t == NULL)
@@ -26,17 +32,27 @@ reg_index codeGen(tnode *t)
 
     if (isOperatorNode(t))
     {
-        reg_index r = codeGen_evaluate_expression(t);
-        freeReg();
-        return current_register;
+        if (isAssignmentNode(t))
+        {
+            int offset = 4096 + (t->left->varname[0] - 'a');
+            reg_index r = codeGen_evaluate_expression(t->right);
+            storeInStack(r, offset);
+            return current_register;
+        }
+        else if (isAritmeticNode(t) || isRelationalNode(t))
+        {
+            reg_index r = codeGen_evaluate_expression(t);
+            freeReg();
+            return current_register;
+        }
     }
-    if (isReadNode(t))
+    else if (isReadNode(t))
     {
-        int offset = t->left->varname[0] - 'a';
-        readToAddress(4096 + offset);
+        int offset = 4096 + t->left->varname[0] - 'a';
+        readToAddress(offset);
         return current_register;
     }
-    if (isWriteNode(t))
+    else if (isWriteNode(t))
     {
         reg_index r;
         if (isOperatorNode(t->left))
@@ -51,10 +67,39 @@ reg_index codeGen(tnode *t)
         printRegister(r);
         return current_register;
     }
-    if (isAssignmentNode(t))
+    else if (isIfElseNode(t))
     {
-        int offset = 4096 + (t->left->varname[0] - 'a');
-        storeInStack(codeGen_evaluate_expression(t->right), offset);
+        if (t->right != NULL)
+        {
+            int elseLabel = getLabel();
+            int finishLabel = getLabel();
+            reg_index r = codeGen_evaluate_expression(t->left);
+            codeGen_jump_to_label_if_zero(r, elseLabel);
+            freeReg();
+            codeGen(t->middle);
+            codeGen_jump_to_label(finishLabel);
+            codeGen_label_definition(elseLabel);
+            codeGen(t->right);
+            codeGen_label_definition(finishLabel);
+        }
+        else
+        {
+            int finishLabel = getLabel();
+            reg_index r = codeGen_evaluate_expression(t->left);
+            codeGen_jump_to_label_if_zero(r, finishLabel);
+            codeGen(t->middle);
+            codeGen_label_definition(finishLabel);
+        }
+        return current_register;
+    }
+    else if (isWhileNode(t))
+    {
+        int startLabel = getLabel();
+        int finishLabel = getLabel();
+        reg_index r = codeGen_evaluate_expression(t->left);
+        codeGen_jump_to_label_if_zero(r, finishLabel);
+        codeGen(t->right);
+        codeGen_jump_to_label(startLabel);
         return current_register;
     }
     codeGen(t->left);
@@ -106,6 +151,30 @@ reg_index codeGen_operation(tnode *t, reg_index left_expression, reg_index right
     {
         codeGen_divide_two_registers(left_expression, right_expression);
     }
+    else if (matchesOperator(t, "<"))
+    {
+        codeGen_less_than_two_registers(left_expression, right_expression);
+    }
+    else if (matchesOperator(t, "<="))
+    {
+        codeGen_less_than_equal_two_registers(left_expression, right_expression);
+    }
+    else if (matchesOperator(t, ">"))
+    {
+        codeGen_greater_than_two_registers(left_expression, right_expression);
+    }
+    else if (matchesOperator(t, ">="))
+    {
+        codeGen_greater_than_equal_two_registers(left_expression, right_expression);
+    }
+    else if (matchesOperator(t, "!="))
+    {
+        codeGen_not_equal_two_registers(left_expression, right_expression);
+    }
+    else if (matchesOperator(t, "=="))
+    {
+        codeGen_equal_two_registers(left_expression, right_expression);
+    }
     return current_register;
 }
 
@@ -148,9 +217,76 @@ reg_index codeGen_divide_two_registers(reg_index r1, reg_index r2)
     return current_register;
 }
 
+reg_index codeGen_less_than_two_registers(reg_index left_expression, reg_index right_expression)
+{
+    fprintf(target_file, "LT R%d,R%d\n", left_expression, right_expression);
+    freeReg();
+    return current_register;
+}
+
+reg_index codeGen_less_than_equal_two_registers(reg_index left_expression, reg_index right_expression)
+{
+    fprintf(target_file, "LE R%d,R%d\n", left_expression, right_expression);
+    freeReg();
+    return current_register;
+}
+
+reg_index codeGen_greater_than_two_registers(reg_index left_expression, reg_index right_expression)
+{
+    fprintf(target_file, "GT R%d,R%d\n", left_expression, right_expression);
+    freeReg();
+    return current_register;
+}
+
+reg_index codeGen_greater_than_equal_two_registers(reg_index left_expression, reg_index right_expression)
+{
+    fprintf(target_file, "GE R%d,R%d\n", left_expression, right_expression);
+    freeReg();
+    return current_register;
+}
+
+reg_index codeGen_not_equal_two_registers(reg_index left_expression, reg_index right_expression)
+{
+    fprintf(target_file, "NE R%d,R%d\n", left_expression, right_expression);
+    freeReg();
+    return current_register;
+}
+
+reg_index codeGen_equal_two_registers(reg_index left_expression, reg_index right_expression)
+{
+    fprintf(target_file, "EQ R%d,R%d\n", left_expression, right_expression);
+    freeReg();
+    return current_register;
+}
+
+void codeGen_jump_to_label(int label)
+{
+    fprintf(target_file, "JMP L%d\n", label);
+}
+
+void codeGen_jump_to_label_if_zero(reg_index r, int label)
+{
+    fprintf(target_file, "JZ R%d,L%d\n", r, label);
+}
+
+void codeGen_jump_to_label_if_not_zero(reg_index r, int label)
+{
+    fprintf(target_file, "JNZ R%d,L%d\n", r, label);
+}
+
+void codeGen_label_definition(int label)
+{
+    fprintf(target_file, "L%d:", label);
+}
+
 void generateHeader()
 {
     fprintf(target_file, "0\n2056\n0\n0\n0\n0\n0\n0\n");
+}
+
+void addBreakpoint()
+{
+    fprintf(target_file, "BRKP\n");
 }
 
 void initializeStack(int addr)

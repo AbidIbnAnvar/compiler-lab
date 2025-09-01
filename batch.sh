@@ -1,6 +1,3 @@
 #!/bin/bash
 
-lex main.l
-yacc -d main.y
-gcc lex.yy.c y.tab.c -o program
-./program
+(cd code_generation && ./codegen.sh)

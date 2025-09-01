@@ -55,10 +55,23 @@ extern int yydebug;
     MUL = 261,
     DIV = 262,
     MINUS = 263,
-    BEG = 264,
-    END = 265,
+    BEGIN_STMT = 264,
+    END_STMT = 265,
     READ = 266,
-    WRITE = 267
+    WRITE = 267,
+    IF = 268,
+    THEN = 269,
+    ELSE = 270,
+    ENDIF = 271,
+    WHILE = 272,
+    DO = 273,
+    ENDWHILE = 274,
+    LT = 275,
+    LE = 276,
+    GT = 277,
+    GE = 278,
+    NE = 279,
+    EQ = 280
   };
 #endif
 /* Tokens.  */
@@ -68,20 +81,33 @@ extern int yydebug;
 #define MUL 261
 #define DIV 262
 #define MINUS 263
-#define BEG 264
-#define END 265
+#define BEGIN_STMT 264
+#define END_STMT 265
 #define READ 266
 #define WRITE 267
+#define IF 268
+#define THEN 269
+#define ELSE 270
+#define ENDIF 271
+#define WHILE 272
+#define DO 273
+#define ENDWHILE 274
+#define LT 275
+#define LE 276
+#define GT 277
+#define GE 278
+#define NE 279
+#define EQ 280
 
 /* Value type.  */
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
 union YYSTYPE
 {
-#line 16 "main.y"
+#line 15 "main.y"
 
     struct tnode* node;
 
-#line 85 "y.tab.h"
+#line 111 "y.tab.h"
 
 };
 typedef union YYSTYPE YYSTYPE;
