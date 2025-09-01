@@ -1,7 +1,7 @@
 %{
     #include<stdio.h>
     #include <stdlib.h>
-    #include "../interpreter/interpreter.c"
+    #include "code_generator.c"
     #include "../tree/tree.h"
     #include "../helper/helper.c"
     #include <string.h>
@@ -175,6 +175,11 @@ void prefixprint(tnode* t){
 int main(){
     yyin = fopen("../input.txt", "r");
     yyparse();
-    evaluate_tree(head);
+    target_file = fopen("../target_file.xsm","w");
+    generateHeader();
+    initializeStack(4095+26);
+    codeGen(head);
+    addBreakpoint();
+    callExit();
     return 0;
 }
