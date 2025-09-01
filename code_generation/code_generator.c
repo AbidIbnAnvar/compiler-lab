@@ -96,10 +96,12 @@ reg_index codeGen(tnode *t)
     {
         int startLabel = getLabel();
         int finishLabel = getLabel();
+        codeGen_label_definition(startLabel);
         reg_index r = codeGen_evaluate_expression(t->left);
         codeGen_jump_to_label_if_zero(r, finishLabel);
         codeGen(t->right);
         codeGen_jump_to_label(startLabel);
+        codeGen_label_definition(finishLabel);
         return current_register;
     }
     codeGen(t->left);
