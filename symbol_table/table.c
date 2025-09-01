@@ -1,0 +1,86 @@
+#include "table.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "../helper/constant.h"
+
+int nextBinding = 4096;
+
+Gsymbol *createEntry(char *name, int type, int size, Gsymbol *next)
+{
+    Gsymbol *entry = (Gsymbol *)malloc(sizeof(Gsymbol));
+    entry->name = name;
+    entry->type = type;
+    entry->size = size;
+    entry->binding = nextBinding;
+    nextBinding += size;
+    entry->next = next;
+    return entry;
+}
+
+struct Gsymbol *Lookup(char *name)
+{
+    Gsymbol *curr = tableHead;
+    while (curr != NULL)
+    {
+        if (strcmp(curr->name, name) == 0)
+        {
+            return curr;
+        }
+        curr = curr->next;
+    }
+    return NULL;
+}
+
+void Install(char *name, int type, int size)
+{
+    Gsymbol *curr = tableHead;
+    if (curr == NULL)
+    {
+        tableHead = createEntry(name, type, size, NULL);
+    }
+    else
+    {
+        while (curr->next != NULL)
+        {
+            if (strcmp(curr->name, name) == 0)
+            {
+                perror("Error occurred in installing");
+                return;
+            }
+            curr = curr->next;
+        }
+        curr->next = createEntry(name, type, size, NULL);
+    }
+}
+
+void ShowTable(Gsymbol *g)
+{
+    Gsymbol *curr = g;
+    printf("+----------------+--------+------+---------+\n");
+    printf("| Name           | Type   | Size | Binding |\n");
+    printf("+----------------+--------+------+---------+\n");
+
+    while (curr != NULL)
+    {
+        // Adjust field widths as needed for your actual data
+        printf("| %-14s | %-6s | %-4d | %-7d |\n",
+               curr->name, GetType(curr->type), curr->size, curr->binding);
+        curr = curr->next;
+    }
+
+    printf("+----------------+-------+------+---------+\n");
+}
+
+char *GetType(int type)
+{
+    switch (type)
+    {
+    case TYPE_INT:
+        return "int";
+    case TYPE_STRING:
+        return "string";
+    default:
+        return "";
+    }
+}

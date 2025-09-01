@@ -4,6 +4,7 @@
 #include <string.h>
 #include <stdbool.h>
 #include "../helper/helper.h"
+#include "../symbol_table/table.h"
 
 reg_index current_register = -1;
 int last_used_label = -1;
@@ -39,7 +40,7 @@ reg_index codeGen(tnode *t, int startLabel, int endLabel)
             storeInStack(r, offset);
             return current_register;
         }
-        else if (isAritmeticNode(t) || isRelationalNode(t))
+        else if (isArithmeticNode(t) || isRelationalNode(t))
         {
             reg_index r = codeGen_evaluate_expression(t);
             freeReg();
@@ -449,4 +450,37 @@ void callExit()
     fprintf(target_file, "PUSH R0\n");
     fprintf(target_file, "PUSH R0\n");
     fprintf(target_file, "CALL 0\n");
+}
+
+void parse_declarations(tnode *t)
+{
+    if (t == NULL)
+    {
+        return;
+    }
+    if (isDeclNode(t))
+    {
+        int type = t->left->type;
+        declare_variables(t, type);
+        return;
+    }
+    parse_declarations(t->left);
+    parse_declarations(t->right);
+}
+
+void declare_variables(tnode *t, int type)
+{
+    if (t == NULL)
+    {
+        return;
+    }
+    if (isLeafNode(t))
+    {
+        int size = 1;
+        t->type = type;
+        Install(t->varname, type, size);
+        return;
+    }
+    declare_variables(t->left, type);
+    declare_variables(t->right, type);
 }

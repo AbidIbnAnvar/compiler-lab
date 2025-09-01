@@ -2,7 +2,7 @@
     #include <stdio.h>
     #include <stdlib.h>
     #include "y.tab.h"
-    #include "../tree/tree.c"
+    #include "../tree/tree.h"
 %}
 
 DIGIT   [0-9]
@@ -10,13 +10,7 @@ LETTER [a-z]
 
 %%
 
-{DIGIT}+ {
-    yylval.node = createTree(atoi(yytext),"",TYPE_INT,NULL,NODETYPE_LEAF,NULL,NULL,NULL);
-    return NUM;
-}
 
-"begin" {return BEGIN_STMT;}
-"end" {return END_STMT;}
 "read" {return READ;}
 "write" {return WRITE;}
 "if" {return IF;}
@@ -30,11 +24,24 @@ LETTER [a-z]
 "continue" {return CONTINUE;}
 "repeat" {return REPEAT;}
 "until" {return UNTIL;}
+"decl" {return DECL;}
+"enddecl" {return ENDDECL;}
+"int" {return INT_TYPE;}
+"str" {return STR_TYPE;}
 
+{DIGIT}+ {
+    yylval.node = createTree(atoi(yytext),"",TYPE_INT,NULL,NODETYPE_LEAF,NULL,NULL,NULL);
+    return NUM;
+}
 
 {LETTER}+ {
-    yylval.node = createTree(0,"",TYPE_INT,strdup(yytext),NODETYPE_LEAF,NULL,NULL,NULL);
+    yylval.node = createTree(0,"",TYPE_NULL,strdup(yytext),NODETYPE_LEAF,NULL,NULL,NULL);
     return ID;
+}
+
+\"[^"\n]*\" {
+    yylval.node = createTree(0,"",TYPE_STRING,strdup(yytext),NODETYPE_LEAF,NULL,NULL,NULL);
+    return STR;
 }
 
 "+" {return PLUS;}

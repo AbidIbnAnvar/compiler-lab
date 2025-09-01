@@ -47,4 +47,7 @@ void printRegister(reg_index reg);
 void readToAddress(int addr);
 void callExit();
 
+void parse_declarations(tnode *t);
+void declare_variables(tnode *t, int type);
+
 #endif

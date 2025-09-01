@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "tree.h"
+#include "../helper/helper.h"
 
 tnode *createTree(int val, char *op, Type type, char *c, int nodetype, tnode *l, tnode *m, tnode *r)
 {
@@ -9,6 +10,7 @@ tnode *createTree(int val, char *op, Type type, char *c, int nodetype, tnode *l,
         if ((l->type != TYPE_INT) || (r->type != TYPE_INT))
         {
             fprintf(stderr, "Error: Type Mismatch. Expected Integer\n");
+            printNode(l);
             exit(1);
         }
     }
@@ -17,6 +19,7 @@ tnode *createTree(int val, char *op, Type type, char *c, int nodetype, tnode *l,
         if (l->type != TYPE_INT)
         {
             fprintf(stderr, "Error: Type Mismatch. Expected Integer\n");
+            printNode(l);
             exit(1);
         }
     }
@@ -25,6 +28,7 @@ tnode *createTree(int val, char *op, Type type, char *c, int nodetype, tnode *l,
         if (l->type != TYPE_INT)
         {
             fprintf(stderr, "Error: Type Mismatch. Expected Integer\n");
+            printNode(l);
             exit(1);
         }
     }

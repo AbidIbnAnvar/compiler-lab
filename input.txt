@@ -1,8 +1,11 @@
-begin
-    s = 0;
-    do
-        read(a);
-        s = s + a;
-    while (a!=0);
-    write(s);
-end;
+decl
+    int num;
+    int sum;
+enddecl
+
+read(num);
+sum = 0;
+while (num != 0) do
+  sum = sum + num;
+  read(num);
+endwhile;

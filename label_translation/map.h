@@ -1,3 +1,6 @@
+#ifndef MAP_H
+#define MAP_H
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -10,4 +13,10 @@ typedef struct
 } MapEntry;
 
 MapEntry map[MAX];
-int size = 0;
+int map_size;
+
+void put(const char *key, int value);
+int get(const char *key);
+void print_map();
+
+#endif

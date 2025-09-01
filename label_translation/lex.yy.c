@@ -446,7 +446,7 @@ char *yytext;
     #include <stdlib.h>
     #include <string.h>
     #include <stdbool.h>
-    #include "map.c"
+    #include "map.h"
     int line_no = 0;
     FILE* target_file;
     bool fetchedAddress = false;

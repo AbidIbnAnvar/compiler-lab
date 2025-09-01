@@ -1,37 +1,43 @@
 %{
     #include<stdio.h>
     #include <stdlib.h>
-    #include "code_generator.c"
-    #include "../interpreter/interpreter.c"
+    #include "code_generator.h"
+    #include "../interpreter/interpreter.h"
     #include "../tree/tree.h"
-    #include "../helper/helper.c"
+    #include "../helper/helper.h"
     #include <string.h>
 
     extern int yylex();
     void yyerror(char* s);
     struct tnode* head = NULL;
     FILE* yyin;
+    Gsymbol *tableHead = NULL;
 %}
 
 %union{
     struct tnode* node;
+    struct Gsymbol* gsymbol;
+    int var_type;
 }
 
 
-%token<node> NUM ID
+%token<node> NUM ID STR
 %token PLUS MUL DIV MINUS
-%token BEGIN_STMT END_STMT
 %token READ WRITE
 %token IF THEN ELSE ENDIF
 %token WHILE DO ENDWHILE
 %token LT LE GT GE NE EQ
 %token BREAK CONTINUE
 %token REPEAT UNTIL
+%token DECL ENDDECL
+%token INT_TYPE STR_TYPE
 
 %type <node> expr Slist InputStmt Stmt OutputStmt AsgStmt 
 %type <node> IfStmt WhileStmt 
 %type <node> BreakStmt ContinueStmt
 %type <node> DoWhileStmt RepeatUntilStmt
+%type <gsymbol> DeclList Decl VarList
+%type <var_type> Type
 
 %left PLUS MINUS
 %left MUL DIV
@@ -40,11 +46,62 @@
 
 %%
 
-Program : BEGIN_STMT Slist END_STMT ';' {
+Program : Declarations Slist {
             head = $2;
         }
-        | BEGIN_STMT END_STMT ';' {
-            head = NULL;
+        ;
+
+Declarations :  DECL DeclList ENDDECL {
+                tableHead = $2;
+                ShowTable(tableHead);
+            }
+            | DECL ENDDECL {
+                tableHead = NULL;
+            }
+            ;
+
+DeclList : DeclList Decl {
+            Gsymbol* curr = $1;
+            Gsymbol* next = $2;
+            while(curr!=NULL && curr->next!=NULL){
+                curr = curr->next;
+            }
+            curr->next = next;
+            $$ = $1;
+        }
+        | Decl {
+            $$ = $1;
+        }
+        ;
+
+Decl : Type VarList ';' {
+            int type = $1;
+            Gsymbol* curr = $2;
+            while(curr!=NULL){
+                curr->type = type;
+                curr = curr->next;
+            }
+            $$ = $2;
+        }
+        ;
+
+Type : INT_TYPE {
+        $$ = TYPE_INT;
+    } 
+    | STR_TYPE {
+        $$ = TYPE_STRING;
+    }
+    ;
+
+VarList : VarList ',' ID {
+            Gsymbol* curr = $1;
+            while(curr!=NULL&&curr->next!=NULL){
+                curr = curr->next;
+            }
+            curr->next = createEntry($3->varname,$3->type,1,NULL);
+            $$ = $1;
+        } | ID {
+            $$ = createEntry($1->varname,$1->type,1,NULL);
         }
         ;
 
@@ -95,87 +152,69 @@ OutputStmt : WRITE '(' expr ')' ';' {
         ;
 
 AsgStmt : ID '=' expr ';' {
-            tnode* node = createTree(0,"=",TYPE_NULL,"",NODETYPE_OP_ASSIGNMENT,$1,NULL,$3);
-            $$ = node; 
+            $$ = createTree(0,"=",TYPE_NULL,"",NODETYPE_OP_ASSIGNMENT,$1,NULL,$3);
         };
 
 IfStmt : IF expr THEN Slist ELSE Slist ENDIF ';' {
-            tnode* node = createTree(0,NULL,TYPE_NULL,"",NODETYPE_IF,$2,$4,$6);
-            $$ = node; 
+            $$ = createTree(0,NULL,TYPE_NULL,"",NODETYPE_IF,$2,$4,$6); 
         }
-        | IF expr THEN Slist ENDIF ';' {
-            tnode* node = createTree(0,NULL,TYPE_NULL,"",NODETYPE_IF,$2,$4,NULL);
-            $$ = node;
+        | IF expr THEN Slist ENDIF ';' { 
+            $$ = createTree(0,NULL,TYPE_NULL,"",NODETYPE_IF,$2,$4,NULL);
         }
         ;
 
 WhileStmt : WHILE expr  DO Slist ENDWHILE ';' {
-                tnode* node = createTree(0,NULL,TYPE_NULL,"",NODETYPE_WHILE,$2,NULL,$4);
-                $$ = node;
+                $$ = createTree(0,NULL,TYPE_NULL,"",NODETYPE_WHILE,$2,NULL,$4);
             }
             ;
 
 BreakStmt : BREAK ';' {
-            tnode* node = createTree(0,NULL,TYPE_NULL,"",NODETYPE_BREAK,NULL,NULL,NULL);
-            $$ = node;
+            $$ = createTree(0,NULL,TYPE_NULL,"",NODETYPE_BREAK,NULL,NULL,NULL);
         };
 
 ContinueStmt : CONTINUE ';' {
-            tnode* node = createTree(0,NULL,TYPE_NULL,"",NODETYPE_CONTINUE,NULL,NULL,NULL);
-            $$ = node;
+            $$ = createTree(0,NULL,TYPE_NULL,"",NODETYPE_CONTINUE,NULL,NULL,NULL);
         };
 
 DoWhileStmt : DO Slist WHILE expr ';' {
-            tnode* node = createTree(0,NULL,TYPE_NULL,"",NODETYPE_DO_WHILE,$4,NULL,$2);
-            $$ = node;
+            $$ = createTree(0,NULL,TYPE_NULL,"",NODETYPE_DO_WHILE,$4,NULL,$2);
         }
         ;
 
 RepeatUntilStmt : REPEAT Slist UNTIL expr ';' {
-            tnode* node = createTree(0,NULL,TYPE_NULL,"",NODETYPE_REPEAT_UNTIL,$4,NULL,$2);
-            $$ = node;
+            $$ = createTree(0,NULL,TYPE_NULL,"",NODETYPE_REPEAT_UNTIL,$4,NULL,$2);
         };
 
 expr:
     expr PLUS expr {
-        tnode* node = createTree(0,"+",TYPE_INT,"",NODETYPE_OP_ARITHMETIC,$1,NULL,$3);
-        $$ = node;
+        $$ = createTree(0,"+",TYPE_INT,"",NODETYPE_OP_ARITHMETIC,$1,NULL,$3);
     }
     | expr MINUS expr {
-        tnode* node = createTree(0,"-",TYPE_INT,"",NODETYPE_OP_ARITHMETIC,$1,NULL,$3);
-        $$ = node;
+        $$ = createTree(0,"-",TYPE_INT,"",NODETYPE_OP_ARITHMETIC,$1,NULL,$3);
     }
     | expr MUL expr {
-        tnode* node = createTree(0,"*",TYPE_INT,"",NODETYPE_OP_ARITHMETIC,$1,NULL,$3);
-        $$ = node;
+        $$ = createTree(0,"*",TYPE_INT,"",NODETYPE_OP_ARITHMETIC,$1,NULL,$3);
     }
     | expr DIV expr {
-        tnode* node = createTree(0,"/",TYPE_INT,"",NODETYPE_OP_ARITHMETIC,$1,NULL,$3);
-        $$ = node;
+        $$ = createTree(0,"/",TYPE_INT,"",NODETYPE_OP_ARITHMETIC,$1,NULL,$3);
     }
     | expr LT expr {
-        tnode* node = createTree(0,"<",TYPE_INT,"",NODETYPE_OP_RELATIONAL,$1,NULL,$3);
-        $$ = node;
+        $$ = createTree(0,"<",TYPE_INT,"",NODETYPE_OP_RELATIONAL,$1,NULL,$3);
     }
     | expr LE expr {
-        tnode* node = createTree(0,"<=",TYPE_INT,"",NODETYPE_OP_RELATIONAL,$1,NULL,$3);
-        $$ = node;
+        $$ = createTree(0,"<=",TYPE_INT,"",NODETYPE_OP_RELATIONAL,$1,NULL,$3);
     }
     | expr GT expr {
-        tnode* node = createTree(0,">",TYPE_INT,"",NODETYPE_OP_RELATIONAL,$1,NULL,$3);
-        $$ = node;
+        $$ = createTree(0,">",TYPE_INT,"",NODETYPE_OP_RELATIONAL,$1,NULL,$3);
     }
     | expr GE expr {
-        tnode* node = createTree(0,">=",TYPE_INT,"",NODETYPE_OP_RELATIONAL,$1,NULL,$3);
-        $$ = node;
+        $$ = createTree(0,">=",TYPE_INT,"",NODETYPE_OP_RELATIONAL,$1,NULL,$3);
     }
     | expr NE expr {
-        tnode* node = createTree(0,"!=",TYPE_INT,"",NODETYPE_OP_RELATIONAL,$1,NULL,$3);
-        $$ = node;
+        $$ = createTree(0,"!=",TYPE_INT,"",NODETYPE_OP_RELATIONAL,$1,NULL,$3);
     }
     | expr EQ expr {
-        tnode* node = createTree(0,"==",TYPE_INT,"",NODETYPE_OP_RELATIONAL,$1,NULL,$3);
-        $$ = node;
+        $$ = createTree(0,"==",TYPE_INT,"",NODETYPE_OP_RELATIONAL,$1,NULL,$3);
     }
     | '(' expr ')' {
         $$ = $2;
@@ -183,8 +222,17 @@ expr:
     | NUM {
         $$ = $1;
     }
-    | ID {
+    | STR {
         $$ = $1;
+    }| ID {
+        tnode* node = $1;
+        Gsymbol* g = Lookup(node->varname);
+        if(g==NULL){
+            printf("Error: Variable not declared\n");
+            exit(1);
+        }
+        node->type = g->type;
+        $$ = node;
     }
     ;
 
@@ -192,23 +240,6 @@ expr:
 
 void yyerror(char* s){
     printf("%s\n", s);
-}
-
-void prefixprint(tnode* t){
-    if(t==NULL){return;}
-    if(!t->left && !t->right){
-        if(t->varname) printf("%s ", t->varname);
-        else printf("%d ", t->val); 
-        return;
-    }   
-    prefixprint(t->left);
-    if(t->op && strlen(t->op)>0){
-        printf("%s ", t->op);
-    }else{
-        printf("__ ");
-    }
-    prefixprint(t->right);
-    return;
 }
 
 int main(){
@@ -220,6 +251,5 @@ int main(){
     codeGen(head,-1,-1);
     addBreakpoint();
     callExit();
-    /* evaluate_tree(head); */
     return 0;
 }

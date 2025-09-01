@@ -51,71 +51,79 @@ extern int yydebug;
   {
     NUM = 258,
     ID = 259,
-    PLUS = 260,
-    MUL = 261,
-    DIV = 262,
-    MINUS = 263,
-    BEGIN_STMT = 264,
-    END_STMT = 265,
-    READ = 266,
-    WRITE = 267,
-    IF = 268,
-    THEN = 269,
-    ELSE = 270,
-    ENDIF = 271,
-    WHILE = 272,
-    DO = 273,
-    ENDWHILE = 274,
-    LT = 275,
-    LE = 276,
-    GT = 277,
-    GE = 278,
-    NE = 279,
-    EQ = 280,
-    BREAK = 281,
-    CONTINUE = 282,
-    REPEAT = 283,
-    UNTIL = 284
+    STR = 260,
+    PLUS = 261,
+    MUL = 262,
+    DIV = 263,
+    MINUS = 264,
+    READ = 265,
+    WRITE = 266,
+    IF = 267,
+    THEN = 268,
+    ELSE = 269,
+    ENDIF = 270,
+    WHILE = 271,
+    DO = 272,
+    ENDWHILE = 273,
+    LT = 274,
+    LE = 275,
+    GT = 276,
+    GE = 277,
+    NE = 278,
+    EQ = 279,
+    BREAK = 280,
+    CONTINUE = 281,
+    REPEAT = 282,
+    UNTIL = 283,
+    DECL = 284,
+    ENDDECL = 285,
+    INT_TYPE = 286,
+    STR_TYPE = 287
   };
 #endif
 /* Tokens.  */
 #define NUM 258
 #define ID 259
-#define PLUS 260
-#define MUL 261
-#define DIV 262
-#define MINUS 263
-#define BEGIN_STMT 264
-#define END_STMT 265
-#define READ 266
-#define WRITE 267
-#define IF 268
-#define THEN 269
-#define ELSE 270
-#define ENDIF 271
-#define WHILE 272
-#define DO 273
-#define ENDWHILE 274
-#define LT 275
-#define LE 276
-#define GT 277
-#define GE 278
-#define NE 279
-#define EQ 280
-#define BREAK 281
-#define CONTINUE 282
-#define REPEAT 283
-#define UNTIL 284
+#define STR 260
+#define PLUS 261
+#define MUL 262
+#define DIV 263
+#define MINUS 264
+#define READ 265
+#define WRITE 266
+#define IF 267
+#define THEN 268
+#define ELSE 269
+#define ENDIF 270
+#define WHILE 271
+#define DO 272
+#define ENDWHILE 273
+#define LT 274
+#define LE 275
+#define GT 276
+#define GE 277
+#define NE 278
+#define EQ 279
+#define BREAK 280
+#define CONTINUE 281
+#define REPEAT 282
+#define UNTIL 283
+#define DECL 284
+#define ENDDECL 285
+#define INT_TYPE 286
+#define STR_TYPE 287
 
 /* Value type.  */
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
 union YYSTYPE
 {
-#line 16 "main.y"
+#line 17 "main.y"
 
     struct tnode* node;
+    struct Gsymbol* gsymbol;
+    int var_type;
 
-#line 119 "y.tab.h"
+#line 127 "y.tab.h"
 
 };
 typedef union YYSTYPE YYSTYPE;

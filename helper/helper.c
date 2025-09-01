@@ -2,7 +2,17 @@
 #include <stdio.h>
 #include <stdbool.h>
 
-bool isAritmeticNode(tnode *t)
+bool isLeafNode(tnode *t)
+{
+    return t && t->nodetype == NODETYPE_LEAF;
+}
+
+bool isConnectorNode(tnode *t)
+{
+    return t && t->nodetype == NODETYPE_CONNECTOR;
+}
+
+bool isArithmeticNode(tnode *t)
 {
     return t && t->nodetype == NODETYPE_OP_ARITHMETIC;
 }
@@ -14,7 +24,7 @@ bool isRelationalNode(tnode *t)
 
 bool isOperatorNode(tnode *t)
 {
-    return (isAritmeticNode(t) || isRelationalNode(t) || isAssignmentNode(t));
+    return (isArithmeticNode(t) || isRelationalNode(t) || isAssignmentNode(t));
 }
 
 bool isWriteNode(tnode *t)
@@ -62,6 +72,16 @@ bool isDoWhileNode(tnode *t)
     return t && t->nodetype == NODETYPE_DO_WHILE;
 }
 
+bool isDeclBlockNode(tnode *t)
+{
+    return t && t->nodetype == NODETYPE_DECLARATION_BLOCK;
+}
+
+bool isDeclNode(tnode *t)
+{
+    return t && t->nodetype == NODETYPE_DECLARATION;
+}
+
 bool matchesOperator(tnode *t, char *op)
 {
     return t && (strcmp(t->op, op) == 0);
@@ -84,4 +104,31 @@ void printArray(int arr[], int size)
 void printNode(tnode *t)
 {
     printf("(%d,%s,%d,%d) \n", t->val, t->varname, t->type, t->nodetype);
+}
+
+void prefixprint(tnode *t)
+{
+    if (t == NULL)
+    {
+        return;
+    }
+    if (!t->left && !t->right)
+    {
+        if (t->varname)
+            printf("%s ", t->varname);
+        else
+            printf("%d ", t->val);
+        return;
+    }
+    prefixprint(t->left);
+    if (t->op && strlen(t->op) > 0)
+    {
+        printf("%s ", t->op);
+    }
+    else
+    {
+        printf("__ ");
+    }
+    prefixprint(t->right);
+    return;
 }

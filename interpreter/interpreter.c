@@ -19,7 +19,7 @@ void evaluate_tree(tnode *t)
             int val = evaluate_expression(t->right);
             variables[offset] = val;
         }
-        else if (isAritmeticNode(t) || isRelationalNode(t))
+        else if (isArithmeticNode(t) || isRelationalNode(t))
         {
             evaluate_expression(t);
         }
