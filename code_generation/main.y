@@ -2,6 +2,7 @@
     #include<stdio.h>
     #include <stdlib.h>
     #include "code_generator.c"
+    #include "../interpreter/interpreter.c"
     #include "../tree/tree.h"
     #include "../helper/helper.c"
     #include <string.h>
@@ -24,8 +25,9 @@
 %token IF THEN ELSE ENDIF
 %token WHILE DO ENDWHILE
 %token LT LE GT GE NE EQ
+%token BREAK CONTINUE
 
-%type <node> expr Slist InputStmt Stmt OutputStmt AsgStmt IfStmt WhileStmt
+%type <node> expr Slist InputStmt Stmt OutputStmt AsgStmt IfStmt WhileStmt BreakStmt ContinueStmt
 
 %left PLUS MINUS
 %left MUL DIV
@@ -64,6 +66,12 @@ Stmt : InputStmt {
         | WhileStmt {
             $$ = $1;
         }
+        | BreakStmt {
+            $$ = $1;
+        }
+        | ContinueStmt {
+            $$ = $1;
+        }
         ;
 
 InputStmt : READ '(' ID ')' ';' {
@@ -96,6 +104,16 @@ WhileStmt : WHILE '(' expr ')' DO Slist ENDWHILE ';' {
                 $$ = node;
             }
             ;
+
+BreakStmt : BREAK ';' {
+            tnode* node = createTree(0,NULL,TYPE_NULL,"",NODETYPE_BREAK,NULL,NULL,NULL);
+            $$ = node;
+        };
+
+ContinueStmt : CONTINUE ';' {
+            tnode* node = createTree(0,NULL,TYPE_NULL,"",NODETYPE_CONTINUE,NULL,NULL,NULL);
+            $$ = node;
+        };
 
 expr:
     expr PLUS expr {
@@ -178,8 +196,9 @@ int main(){
     target_file = fopen("../target_file.xsm","w");
     generateHeader();
     initializeStack(4095+26);
-    codeGen(head);
+    codeGen(head,-1,-1);
     addBreakpoint();
     callExit();
+    /* evaluate_tree(head); */
     return 0;
 }

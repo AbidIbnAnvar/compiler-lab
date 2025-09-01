@@ -26,6 +26,8 @@ LETTER [a-z]
 "while" {return WHILE;}
 "do" {return DO;}
 "endwhile" {return ENDWHILE;}
+"break" {return BREAK;}
+"continue" {return CONTINUE;}
 
 {LETTER}+ {
     yylval.node = createTree(0,"",TYPE_INT,strdup(yytext),NODETYPE_LEAF,NULL,NULL,NULL);

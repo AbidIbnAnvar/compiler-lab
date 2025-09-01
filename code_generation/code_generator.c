@@ -23,7 +23,7 @@ int getLabel()
     return ++last_used_label;
 }
 
-reg_index codeGen(tnode *t)
+reg_index codeGen(tnode *t, int startLabel, int endLabel)
 {
     if (t == NULL)
     {
@@ -76,10 +76,10 @@ reg_index codeGen(tnode *t)
             reg_index r = codeGen_evaluate_expression(t->left);
             codeGen_jump_to_label_if_zero(r, elseLabel);
             freeReg();
-            codeGen(t->middle);
+            codeGen(t->middle, startLabel, endLabel);
             codeGen_jump_to_label(finishLabel);
             codeGen_label_definition(elseLabel);
-            codeGen(t->right);
+            codeGen(t->right, startLabel, endLabel);
             codeGen_label_definition(finishLabel);
         }
         else
@@ -87,25 +87,35 @@ reg_index codeGen(tnode *t)
             int finishLabel = getLabel();
             reg_index r = codeGen_evaluate_expression(t->left);
             codeGen_jump_to_label_if_zero(r, finishLabel);
-            codeGen(t->middle);
+            codeGen(t->middle, startLabel, endLabel);
             codeGen_label_definition(finishLabel);
         }
         return current_register;
     }
     else if (isWhileNode(t))
     {
-        int startLabel = getLabel();
-        int finishLabel = getLabel();
-        codeGen_label_definition(startLabel);
+        int start_label = getLabel();
+        int end_label = getLabel();
+        codeGen_label_definition(start_label);
         reg_index r = codeGen_evaluate_expression(t->left);
-        codeGen_jump_to_label_if_zero(r, finishLabel);
-        codeGen(t->right);
-        codeGen_jump_to_label(startLabel);
-        codeGen_label_definition(finishLabel);
+        codeGen_jump_to_label_if_zero(r, end_label);
+        codeGen(t->right, start_label, end_label);
+        codeGen_jump_to_label(start_label);
+        codeGen_label_definition(end_label);
         return current_register;
     }
-    codeGen(t->left);
-    codeGen(t->right);
+    else if (isBreakNode(t))
+    {
+        codeGen_jump_to_label(endLabel);
+        return current_register;
+    }
+    else if (isContinueNode(t))
+    {
+        codeGen_jump_to_label(startLabel);
+        return current_register;
+    }
+    codeGen(t->left, startLabel, endLabel);
+    codeGen(t->right, startLabel, endLabel);
     return current_register;
 }
 

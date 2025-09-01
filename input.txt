@@ -2,6 +2,10 @@ begin
     read(a);
     s = 0;
     while(a!=0) do
+        if(a==2) then
+            read(a);
+            continue;
+        endif;
         s = s + a;
         read(a);
     endwhile;

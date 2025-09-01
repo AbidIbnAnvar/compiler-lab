@@ -115,19 +115,19 @@ int doOperation(char *op, int left, int right)
     }
     else if (strcmp(op, "<=") == 0)
     {
-        return left == right;
+        return left <= right;
     }
     else if (strcmp(op, ">") == 0)
     {
-        return left == right;
+        return left > right;
     }
     else if (strcmp(op, ">=") == 0)
     {
-        return left == right;
+        return left >= right;
     }
     else if (strcmp(op, "!=") == 0)
     {
-        return left == right;
+        return left != right;
     }
     else if (strcmp(op, "==") == 0)
     {

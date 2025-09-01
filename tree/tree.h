@@ -22,7 +22,9 @@ typedef enum NodeType
     NODETYPE_OP_ASSIGNMENT,
     NODETYPE_OP_RELATIONAL,
     NODETYPE_IF,
-    NODETYPE_WHILE
+    NODETYPE_WHILE,
+    NODETYPE_BREAK,
+    NODETYPE_CONTINUE
 } NodeType;
 
 typedef struct tnode

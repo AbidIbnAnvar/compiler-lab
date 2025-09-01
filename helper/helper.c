@@ -42,6 +42,16 @@ bool isWhileNode(tnode *t)
     return t && t->nodetype == NODETYPE_WHILE;
 }
 
+bool isBreakNode(tnode *t)
+{
+    return t && t->nodetype == NODETYPE_BREAK;
+}
+
+bool isContinueNode(tnode *t)
+{
+    return t && t->nodetype == NODETYPE_CONTINUE;
+}
+
 bool matchesOperator(tnode *t, char *op)
 {
     return t && (strcmp(t->op, op) == 0);

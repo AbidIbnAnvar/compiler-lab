@@ -11,7 +11,7 @@ reg_index current_register;
 
 FILE *target_file;
 
-reg_index codeGen(tnode *t);
+reg_index codeGen(tnode *t, int startLabel, int endLabel);
 reg_index getReg();
 reg_index freeReg();
 
