@@ -24,7 +24,9 @@ typedef enum NodeType
     NODETYPE_IF,
     NODETYPE_WHILE,
     NODETYPE_BREAK,
-    NODETYPE_CONTINUE
+    NODETYPE_CONTINUE,
+    NODETYPE_DO_WHILE,
+    NODETYPE_REPEAT_UNTIL
 } NodeType;
 
 typedef struct tnode

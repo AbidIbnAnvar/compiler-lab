@@ -73,7 +73,9 @@ extern int yydebug;
     NE = 279,
     EQ = 280,
     BREAK = 281,
-    CONTINUE = 282
+    CONTINUE = 282,
+    REPEAT = 283,
+    UNTIL = 284
   };
 #endif
 /* Tokens.  */
@@ -102,6 +104,8 @@ extern int yydebug;
 #define EQ 280
 #define BREAK 281
 #define CONTINUE 282
+#define REPEAT 283
+#define UNTIL 284
 
 /* Value type.  */
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
@@ -111,7 +115,7 @@ union YYSTYPE
 
     struct tnode* node;
 
-#line 115 "y.tab.h"
+#line 119 "y.tab.h"
 
 };
 typedef union YYSTYPE YYSTYPE;

@@ -52,6 +52,16 @@ bool isContinueNode(tnode *t)
     return t && t->nodetype == NODETYPE_CONTINUE;
 }
 
+bool isRepeatUntilNode(tnode *t)
+{
+    return t && t->nodetype == NODETYPE_REPEAT_UNTIL;
+}
+
+bool isDoWhileNode(tnode *t)
+{
+    return t && t->nodetype == NODETYPE_DO_WHILE;
+}
+
 bool matchesOperator(tnode *t, char *op)
 {
     return t && (strcmp(t->op, op) == 0);

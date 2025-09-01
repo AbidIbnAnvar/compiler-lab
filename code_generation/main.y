@@ -26,8 +26,12 @@
 %token WHILE DO ENDWHILE
 %token LT LE GT GE NE EQ
 %token BREAK CONTINUE
+%token REPEAT UNTIL
 
-%type <node> expr Slist InputStmt Stmt OutputStmt AsgStmt IfStmt WhileStmt BreakStmt ContinueStmt
+%type <node> expr Slist InputStmt Stmt OutputStmt AsgStmt 
+%type <node> IfStmt WhileStmt 
+%type <node> BreakStmt ContinueStmt
+%type <node> DoWhileStmt RepeatUntilStmt
 
 %left PLUS MINUS
 %left MUL DIV
@@ -72,6 +76,12 @@ Stmt : InputStmt {
         | ContinueStmt {
             $$ = $1;
         }
+        | DoWhileStmt {
+            $$ = $1;
+        }
+        | RepeatUntilStmt {
+            $$ = $1;
+        }
         ;
 
 InputStmt : READ '(' ID ')' ';' {
@@ -89,18 +99,18 @@ AsgStmt : ID '=' expr ';' {
             $$ = node; 
         };
 
-IfStmt : IF '(' expr ')' THEN Slist ELSE Slist ENDIF ';' {
-            tnode* node = createTree(0,NULL,TYPE_NULL,"",NODETYPE_IF,$3,$6,$8);
+IfStmt : IF expr THEN Slist ELSE Slist ENDIF ';' {
+            tnode* node = createTree(0,NULL,TYPE_NULL,"",NODETYPE_IF,$2,$4,$6);
             $$ = node; 
         }
-        | IF '('expr ')' THEN Slist ENDIF ';' {
-            tnode* node = createTree(0,NULL,TYPE_NULL,"",NODETYPE_IF,$3,$6,NULL);
+        | IF expr THEN Slist ENDIF ';' {
+            tnode* node = createTree(0,NULL,TYPE_NULL,"",NODETYPE_IF,$2,$4,NULL);
             $$ = node;
         }
         ;
 
-WhileStmt : WHILE '(' expr ')' DO Slist ENDWHILE ';' {
-                tnode* node = createTree(0,"+",TYPE_NULL,"",NODETYPE_WHILE,$3,NULL,$6);
+WhileStmt : WHILE expr  DO Slist ENDWHILE ';' {
+                tnode* node = createTree(0,NULL,TYPE_NULL,"",NODETYPE_WHILE,$2,NULL,$4);
                 $$ = node;
             }
             ;
@@ -112,6 +122,17 @@ BreakStmt : BREAK ';' {
 
 ContinueStmt : CONTINUE ';' {
             tnode* node = createTree(0,NULL,TYPE_NULL,"",NODETYPE_CONTINUE,NULL,NULL,NULL);
+            $$ = node;
+        };
+
+DoWhileStmt : DO Slist WHILE expr ';' {
+            tnode* node = createTree(0,NULL,TYPE_NULL,"",NODETYPE_DO_WHILE,$4,NULL,$2);
+            $$ = node;
+        }
+        ;
+
+RepeatUntilStmt : REPEAT Slist UNTIL expr ';' {
+            tnode* node = createTree(0,NULL,TYPE_NULL,"",NODETYPE_REPEAT_UNTIL,$4,NULL,$2);
             $$ = node;
         };
 

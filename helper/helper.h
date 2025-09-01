@@ -14,6 +14,8 @@ bool isWhileNode(tnode *t);
 bool isIfElseNode(tnode *t);
 bool isBreakNode(tnode *t);
 bool isContinueNode(tnode *t);
+bool isRepeatUntilNode(tnode *t);
+bool isDoWhileNode(tnode *t);
 bool matchesOperator(tnode *t, char *op);
 bool isRelationalOperator(tnode *t);
 

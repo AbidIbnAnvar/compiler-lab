@@ -114,6 +114,29 @@ reg_index codeGen(tnode *t, int startLabel, int endLabel)
         codeGen_jump_to_label(startLabel);
         return current_register;
     }
+    else if (isDoWhileNode(t))
+    {
+        int start_label = getLabel();
+        int end_label = getLabel();
+        codeGen_label_definition(start_label);
+        codeGen(t->right, start_label, end_label);
+        reg_index r = codeGen_evaluate_expression(t->left);
+        codeGen_jump_to_label_if_not_zero(r, start_label);
+        codeGen_label_definition(end_label);
+        return current_register;
+    }
+    else if (isRepeatUntilNode(t))
+    {
+        int start_label = getLabel();
+        int end_label = getLabel();
+        codeGen_label_definition(start_label);
+        codeGen(t->right, start_label, end_label);
+        reg_index r = codeGen_evaluate_expression(t->left);
+        codeGen_jump_to_label_if_zero(r, start_label);
+        codeGen_label_definition(end_label);
+        return current_register;
+    }
+
     codeGen(t->left, startLabel, endLabel);
     codeGen(t->right, startLabel, endLabel);
     return current_register;
