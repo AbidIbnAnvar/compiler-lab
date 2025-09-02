@@ -1,6 +1,5 @@
 decl
-    int num;
-    int sum;
+    int num,sum;
 enddecl
 
 read(num);

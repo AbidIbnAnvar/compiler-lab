@@ -1,9 +1,7 @@
-#include <stdio.h>
-#include <stdlib.h>
 #include "tree.h"
 #include "../helper/helper.h"
 
-tnode *createTree(int val, char *op, Type type, char *c, int nodetype, tnode *l, tnode *m, tnode *r)
+tnode *createTree(int val, char *op, Type type, char *c, NodeType nodetype, tnode *l, tnode *m, tnode *r, Gsymbol *Gentry)
 {
     if (nodetype == NODETYPE_OP_ARITHMETIC)
     {
@@ -41,5 +39,18 @@ tnode *createTree(int val, char *op, Type type, char *c, int nodetype, tnode *l,
     tree->left = l;
     tree->right = r;
     tree->middle = m;
+    tree->Gentry = Gentry;
     return tree;
+}
+
+void freeTree(tnode *t)
+{
+    if (t == NULL)
+        return;
+    freeTree(t->left);
+    freeTree(t->middle);
+    freeTree(t->right);
+    if (t->varname)
+        free(t->varname);
+    free(t);
 }

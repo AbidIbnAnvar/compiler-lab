@@ -19,4 +19,5 @@ Gsymbol *Lookup(char *name);
 void Install(char *name, int type, int size);
 void ShowTable(Gsymbol *g);
 char *GetType(int type);
+void FreeGsymbolList(Gsymbol *head);
 #endif

@@ -35,7 +35,13 @@ reg_index codeGen(tnode *t, int startLabel, int endLabel)
     {
         if (isAssignmentNode(t))
         {
-            int offset = 4096 + (t->left->varname[0] - 'a');
+            Gsymbol *g = Lookup(t->left->varname);
+            if (g == NULL)
+            {
+                printf("Error: Variable not declared\n");
+                exit(1);
+            }
+            int offset = g->binding;
             reg_index r = codeGen_evaluate_expression(t->right);
             storeInStack(r, offset);
             return current_register;
@@ -49,7 +55,13 @@ reg_index codeGen(tnode *t, int startLabel, int endLabel)
     }
     else if (isReadNode(t))
     {
-        int offset = 4096 + t->left->varname[0] - 'a';
+        Gsymbol *g = Lookup(t->left->varname);
+        if (g == NULL)
+        {
+            printf("Error: Variable not declared\n");
+            exit(1);
+        }
+        int offset = g->binding;
         readToAddress(offset);
         return current_register;
     }
@@ -62,8 +74,14 @@ reg_index codeGen(tnode *t, int startLabel, int endLabel)
         }
         else
         {
-            int offset = t->left->varname[0] - 'a';
-            r = readFromStack(4096 + offset);
+            Gsymbol *g = Lookup(t->left->varname);
+            if (g == NULL)
+            {
+                printf("Error: Variable not declared\n");
+                exit(1);
+            }
+            int offset = g->binding;
+            r = readFromStack(offset);
         }
         printRegister(r);
         return current_register;
@@ -158,7 +176,13 @@ reg_index codeGen_evaluate_expression(tnode *t)
         }
         else
         {
-            int offset = 4096 + (t->varname[0] - 'a');
+            Gsymbol *g = Lookup(t->varname);
+            if (g == NULL)
+            {
+                printf("Error: Variable not declared\n");
+                exit(1);
+            }
+            int offset = g->binding;
             fprintf(target_file, "MOV R%d, [%d]\n", r, offset);
         }
         return current_register;

@@ -106,8 +106,7 @@ VarList : VarList ',' ID {
         ;
 
 Slist : Slist Stmt {
-            tnode* node = createTree(0,"",TYPE_NULL,"",NODETYPE_CONNECTOR,$1,NULL,$2);
-            $$ = node;
+            $$ = createTree(0,"",TYPE_NULL,NULL,NODETYPE_CONNECTOR,$1,NULL,$2,NULL);
         }
         | Stmt { $$ = $1; }
         ;
@@ -142,79 +141,79 @@ Stmt : InputStmt {
         ;
 
 InputStmt : READ '(' ID ')' ';' {
-           $$ = createTree(0,NULL,TYPE_NULL,NULL,NODETYPE_READ,$3,NULL,NULL); 
+           $$ = createTree(0,NULL,TYPE_NULL,NULL,NODETYPE_READ,$3,NULL,NULL,NULL); 
         }
         ;
 
 OutputStmt : WRITE '(' expr ')' ';' {
-           $$ = createTree(0,NULL,TYPE_NULL,NULL,NODETYPE_WRITE,$3,NULL,NULL); 
+           $$ = createTree(0,NULL,TYPE_NULL,NULL,NODETYPE_WRITE,$3,NULL,NULL,NULL); 
         }
         ;
 
 AsgStmt : ID '=' expr ';' {
-            $$ = createTree(0,"=",TYPE_NULL,"",NODETYPE_OP_ASSIGNMENT,$1,NULL,$3);
+            $$ = createTree(0,"=",TYPE_NULL,NULL,NODETYPE_OP_ASSIGNMENT,$1,NULL,$3,NULL);
         };
 
 IfStmt : IF expr THEN Slist ELSE Slist ENDIF ';' {
-            $$ = createTree(0,NULL,TYPE_NULL,"",NODETYPE_IF,$2,$4,$6); 
+            $$ = createTree(0,NULL,TYPE_NULL,NULL,NODETYPE_IF,$2,$4,$6,NULL); 
         }
         | IF expr THEN Slist ENDIF ';' { 
-            $$ = createTree(0,NULL,TYPE_NULL,"",NODETYPE_IF,$2,$4,NULL);
+            $$ = createTree(0,NULL,TYPE_NULL,NULL,NODETYPE_IF,$2,$4,NULL,NULL);
         }
         ;
 
 WhileStmt : WHILE expr  DO Slist ENDWHILE ';' {
-                $$ = createTree(0,NULL,TYPE_NULL,"",NODETYPE_WHILE,$2,NULL,$4);
+                $$ = createTree(0,NULL,TYPE_NULL,NULL,NODETYPE_WHILE,$2,NULL,$4,NULL);
             }
             ;
 
 BreakStmt : BREAK ';' {
-            $$ = createTree(0,NULL,TYPE_NULL,"",NODETYPE_BREAK,NULL,NULL,NULL);
+            $$ = createTree(0,NULL,TYPE_NULL,NULL,NODETYPE_BREAK,NULL,NULL,NULL,NULL);
         };
 
 ContinueStmt : CONTINUE ';' {
-            $$ = createTree(0,NULL,TYPE_NULL,"",NODETYPE_CONTINUE,NULL,NULL,NULL);
+            $$ = createTree(0,NULL,TYPE_NULL,NULL,NODETYPE_CONTINUE,NULL,NULL,NULL,NULL);
         };
 
 DoWhileStmt : DO Slist WHILE expr ';' {
-            $$ = createTree(0,NULL,TYPE_NULL,"",NODETYPE_DO_WHILE,$4,NULL,$2);
+            $$ = createTree(0,NULL,TYPE_NULL,NULL,NODETYPE_DO_WHILE,$4,NULL,$2,NULL);
         }
         ;
 
 RepeatUntilStmt : REPEAT Slist UNTIL expr ';' {
-            $$ = createTree(0,NULL,TYPE_NULL,"",NODETYPE_REPEAT_UNTIL,$4,NULL,$2);
+            $$ = createTree(0,NULL,TYPE_NULL,NULL,NODETYPE_REPEAT_UNTIL,$4,NULL,$2,NULL);
         };
 
 expr:
     expr PLUS expr {
-        $$ = createTree(0,"+",TYPE_INT,"",NODETYPE_OP_ARITHMETIC,$1,NULL,$3);
+        $$ = createTree(0,"+",TYPE_INT,NULL,NODETYPE_OP_ARITHMETIC,$1,NULL,$3,NULL);
     }
     | expr MINUS expr {
-        $$ = createTree(0,"-",TYPE_INT,"",NODETYPE_OP_ARITHMETIC,$1,NULL,$3);
+        $$ = createTree(0,"-",TYPE_INT,NULL,NODETYPE_OP_ARITHMETIC,$1,NULL,$3,NULL);
     }
     | expr MUL expr {
-        $$ = createTree(0,"*",TYPE_INT,"",NODETYPE_OP_ARITHMETIC,$1,NULL,$3);
+        $$ = createTree(0,"*",TYPE_INT,NULL,NODETYPE_OP_ARITHMETIC,$1,NULL,$3,NULL);
     }
     | expr DIV expr {
-        $$ = createTree(0,"/",TYPE_INT,"",NODETYPE_OP_ARITHMETIC,$1,NULL,$3);
+        $$ = createTree(0,"/",TYPE_INT,NULL,NODETYPE_OP_ARITHMETIC,$1,NULL,$3,NULL);
     }
     | expr LT expr {
-        $$ = createTree(0,"<",TYPE_INT,"",NODETYPE_OP_RELATIONAL,$1,NULL,$3);
+        $$ = createTree(0,"<",TYPE_INT,NULL,NODETYPE_OP_RELATIONAL,$1,NULL,$3,NULL);
     }
     | expr LE expr {
-        $$ = createTree(0,"<=",TYPE_INT,"",NODETYPE_OP_RELATIONAL,$1,NULL,$3);
+        $$ = createTree(0,"<=",TYPE_INT,NULL,NODETYPE_OP_RELATIONAL,$1,NULL,$3,NULL);
     }
     | expr GT expr {
-        $$ = createTree(0,">",TYPE_INT,"",NODETYPE_OP_RELATIONAL,$1,NULL,$3);
+        $$ = createTree(0,">",TYPE_INT,NULL,NODETYPE_OP_RELATIONAL,$1,NULL,$3,NULL);
     }
     | expr GE expr {
-        $$ = createTree(0,">=",TYPE_INT,"",NODETYPE_OP_RELATIONAL,$1,NULL,$3);
+        $$ = createTree(0,">=",TYPE_INT,NULL,NODETYPE_OP_RELATIONAL,$1,NULL,$3,NULL);
     }
     | expr NE expr {
-        $$ = createTree(0,"!=",TYPE_INT,"",NODETYPE_OP_RELATIONAL,$1,NULL,$3);
+        $$ = createTree(0,"!=",TYPE_INT,NULL,NODETYPE_OP_RELATIONAL,$1,NULL,$3,NULL);
     }
     | expr EQ expr {
-        $$ = createTree(0,"==",TYPE_INT,"",NODETYPE_OP_RELATIONAL,$1,NULL,$3);
+        $$ = createTree(0,"==",TYPE_INT,NULL,NODETYPE_OP_RELATIONAL,$1,NULL,$3,NULL);
     }
     | '(' expr ')' {
         $$ = $2;
@@ -251,5 +250,7 @@ int main(){
     codeGen(head,-1,-1);
     addBreakpoint();
     callExit();
+    freeTree(head);
+    FreeGsymbolList(tableHead);
     return 0;
 }

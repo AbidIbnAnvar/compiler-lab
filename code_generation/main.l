@@ -30,17 +30,19 @@ LETTER [a-z]
 "str" {return STR_TYPE;}
 
 {DIGIT}+ {
-    yylval.node = createTree(atoi(yytext),"",TYPE_INT,NULL,NODETYPE_LEAF,NULL,NULL,NULL);
+    yylval.node = createTree(atoi(yytext),"",TYPE_INT,NULL,NODETYPE_LEAF,NULL,NULL,NULL,NULL);
     return NUM;
 }
 
 {LETTER}+ {
-    yylval.node = createTree(0,"",TYPE_NULL,strdup(yytext),NODETYPE_LEAF,NULL,NULL,NULL);
+    char* varname = strdup(yytext);
+    yylval.node = createTree(0,"",TYPE_NULL,varname,NODETYPE_LEAF,NULL,NULL,NULL,NULL);
     return ID;
 }
 
 \"[^"\n]*\" {
-    yylval.node = createTree(0,"",TYPE_STRING,strdup(yytext),NODETYPE_LEAF,NULL,NULL,NULL);
+    char* varname = strdup(yytext);
+    yylval.node = createTree(0,"",TYPE_STRING,varname,NODETYPE_LEAF,NULL,NULL,NULL,NULL);
     return STR;
 }
 
@@ -60,6 +62,7 @@ LETTER [a-z]
 ")" {return ')';}
 ";" {return ';';}
 "=" {return '=';}
+"," {return ',';}
 
 [ \t\n] {}
 . {}

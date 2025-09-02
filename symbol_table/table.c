@@ -84,3 +84,13 @@ char *GetType(int type)
         return "";
     }
 }
+
+void FreeGsymbolList(Gsymbol* head) {
+    Gsymbol* curr = head;
+    while (curr) {
+        Gsymbol* tmp = curr;
+        curr = curr->next;
+        if (tmp->name) free(tmp->name);
+        free(tmp);
+    }
+}

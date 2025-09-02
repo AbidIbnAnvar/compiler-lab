@@ -17,6 +17,8 @@ typedef struct tnode
     struct tnode *left, *right, *middle;
 } tnode;
 
-tnode *createTree(int val, char *op, Type type, char *c, NodeType nodetype, tnode *l, tnode *m, tnode *r);
+tnode *createTree(int val, char *op, Type type, char *c, NodeType nodetype, tnode *l, tnode *m, tnode *r, Gsymbol *Gentry);
+
+void freeTree(tnode *t);
 
 #endif
