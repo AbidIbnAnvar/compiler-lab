@@ -6,7 +6,7 @@
 
 int nextBinding = 4096;
 
-Gsymbol *createEntry(char *name, int type, int size, Gsymbol *next)
+Gsymbol *createEntry(char *name, int type, int size, dimNode *dimNode, Gsymbol *next)
 {
     Gsymbol *entry = (Gsymbol *)malloc(sizeof(Gsymbol));
     entry->name = name;
@@ -14,6 +14,7 @@ Gsymbol *createEntry(char *name, int type, int size, Gsymbol *next)
     entry->size = size;
     entry->binding = nextBinding;
     nextBinding += size;
+    entry->dimNode = dimNode;
     entry->next = next;
     return entry;
 }
@@ -29,6 +30,9 @@ struct Gsymbol *Lookup(char *name)
         }
         curr = curr->next;
     }
+        printf("Error: variable %s not declared", name);
+        exit(1);
+
     return NULL;
 }
 
@@ -37,7 +41,7 @@ void Install(char *name, int type, int size)
     Gsymbol *curr = tableHead;
     if (curr == NULL)
     {
-        tableHead = createEntry(name, type, size, NULL);
+        tableHead = createEntry(name, type, size, NULL, NULL);
     }
     else
     {
@@ -50,7 +54,7 @@ void Install(char *name, int type, int size)
             }
             curr = curr->next;
         }
-        curr->next = createEntry(name, type, size, NULL);
+        curr->next = createEntry(name, type, size, NULL, NULL);
     }
 }
 
@@ -69,7 +73,7 @@ void ShowTable(Gsymbol *g)
         curr = curr->next;
     }
 
-    printf("+----------------+-------+------+---------+\n");
+    printf("+----------------+--------+------+---------+\n");
 }
 
 char *GetType(int type)
@@ -85,12 +89,15 @@ char *GetType(int type)
     }
 }
 
-void FreeGsymbolList(Gsymbol* head) {
-    Gsymbol* curr = head;
-    while (curr) {
-        Gsymbol* tmp = curr;
+void FreeGsymbolList(Gsymbol *head)
+{
+    Gsymbol *curr = head;
+    while (curr)
+    {
+        Gsymbol *tmp = curr;
         curr = curr->next;
-        if (tmp->name) free(tmp->name);
+        if (tmp->name)
+            free(tmp->name);
         free(tmp);
     }
 }

@@ -21,6 +21,7 @@ bool isRepeatUntilNode(tnode *t);
 bool isDoWhileNode(tnode *t);
 bool isDeclBlockNode(tnode *t);
 bool isDeclNode(tnode *t);
+bool isArrayNode(tnode *t);
 
 bool matchesOperator(tnode *t, char *op);
 bool isRelationalOperator(tnode *t);
@@ -28,5 +29,8 @@ bool isRelationalOperator(tnode *t);
 void printArray(int arr[], int size);
 void printNode(tnode *t);
 void prefixprint(tnode *t);
+
+const char *type_to_string(Type type);
+const char *nodetype_to_string(NodeType nodetype);
 
 #endif

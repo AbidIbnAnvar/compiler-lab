@@ -82,6 +82,11 @@ bool isDeclNode(tnode *t)
     return t && t->nodetype == NODETYPE_DECLARATION;
 }
 
+bool isArrayNode(tnode *t)
+{
+    return t && t->nodetype == NODETYPE_ARRAY;
+}
+
 bool matchesOperator(tnode *t, char *op)
 {
     return t && (strcmp(t->op, op) == 0);
@@ -131,4 +136,64 @@ void prefixprint(tnode *t)
     }
     prefixprint(t->right);
     return;
+}
+
+const char *type_to_string(Type type)
+{
+    switch (type)
+    {
+    case TYPE_NULL:
+        return "NULL";
+    case TYPE_BOOL:
+        return "BOOL";
+    case TYPE_INT:
+        return "INT";
+    case TYPE_STRING:
+        return "STRING";
+    default:
+        return "UNKNOWN";
+    }
+}
+
+const char *nodetype_to_string(NodeType nodetype)
+{
+    switch (nodetype)
+    {
+    case NODETYPE_LEAF:
+        return "LEAF";
+    case NODETYPE_READ:
+        return "READ";
+    case NODETYPE_WRITE:
+        return "WRITE";
+    case NODETYPE_CONNECTOR:
+        return "CONNECTOR";
+    case NODETYPE_OP_ARITHMETIC:
+        return "ARITHMETIC";
+    case NODETYPE_OP_ASSIGNMENT:
+        return "ASSIGNMENT";
+    case NODETYPE_OP_RELATIONAL:
+        return "RELATIONAL";
+    case NODETYPE_IF:
+        return "IF";
+    case NODETYPE_WHILE:
+        return "WHILE";
+    case NODETYPE_BREAK:
+        return "BREAK";
+    case NODETYPE_CONTINUE:
+        return "CONTINUE";
+    case NODETYPE_DO_WHILE:
+        return "DO_WHILE";
+    case NODETYPE_REPEAT_UNTIL:
+        return "REPEAT_UNTIL";
+    case NODETYPE_TYPE:
+        return "TYPE";
+    case NODETYPE_DECLARATION:
+        return "DECLARATION";
+    case NODETYPE_DECLARATION_BLOCK:
+        return "DECL_BLOCK";
+    case NODETYPE_ARRAY:
+        return "ARRAY";
+    default:
+        return "UNKNOWN";
+    }
 }

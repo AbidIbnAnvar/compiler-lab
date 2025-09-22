@@ -4,20 +4,25 @@
     #include "code_generator.h"
     #include "../interpreter/interpreter.h"
     #include "../tree/tree.h"
+    #include "../array/array.h"
     #include "../helper/helper.h"
     #include <string.h>
 
     extern int yylex();
+    extern int yylineno;
+    extern char *yytext; 
     void yyerror(char* s);
     struct tnode* head = NULL;
     FILE* yyin;
     Gsymbol *tableHead = NULL;
+    // extern YYLTYPE yylloc;
 %}
 
 %union{
     struct tnode* node;
     struct Gsymbol* gsymbol;
     int var_type;
+    struct dimNode* dim;
 }
 
 
@@ -37,17 +42,20 @@
 %type <node> BreakStmt ContinueStmt
 %type <node> DoWhileStmt RepeatUntilStmt
 %type <gsymbol> DeclList Decl VarList
+%type <dim> Dimlist DimDecl
 %type <var_type> Type
 
 %left PLUS MINUS
 %left MUL DIV
 
 %nonassoc LE LT GT GE NE EQ
+%locations
 
 %%
 
 Program : Declarations Slist {
             head = $2;
+            printTree(head);
         }
         ;
 
@@ -62,11 +70,10 @@ Declarations :  DECL DeclList ENDDECL {
 
 DeclList : DeclList Decl {
             Gsymbol* curr = $1;
-            Gsymbol* next = $2;
             while(curr!=NULL && curr->next!=NULL){
                 curr = curr->next;
             }
-            curr->next = next;
+            curr->next = $2;
             $$ = $1;
         }
         | Decl {
@@ -75,10 +82,11 @@ DeclList : DeclList Decl {
         ;
 
 Decl : Type VarList ';' {
-            int type = $1;
+            // Get symbol table pointer for varlist
             Gsymbol* curr = $2;
+            // Assign type to all entries of varlist
             while(curr!=NULL){
-                curr->type = type;
+                curr->type = $1;
                 curr = curr->next;
             }
             $$ = $2;
@@ -94,19 +102,40 @@ Type : INT_TYPE {
     ;
 
 VarList : VarList ',' ID {
+            // Get symbol table pointer for varlist
             Gsymbol* curr = $1;
             while(curr!=NULL&&curr->next!=NULL){
                 curr = curr->next;
             }
-            curr->next = createEntry($3->varname,$3->type,1,NULL);
+            // Append entry to the end of the symbol table
+            curr->next = createEntry($3->varname,$3->type,1,NULL,NULL);
             $$ = $1;
-        } | ID {
-            $$ = createEntry($1->varname,$1->type,1,NULL);
+        } 
+        | ID {
+            $$ = createEntry($1->varname,$1->type,1,NULL,NULL);
+        } 
+        | VarList ',' ID DimDecl {
+            // Get symbol table pointer for varlist
+            Gsymbol* curr = $1;
+            while(curr!=NULL&&curr->next!=NULL){
+                curr = curr->next;
+            }
+            // Get total size of dimlist
+            int size = getArraySize($4);
+            // Append entry to the end of the symbol table
+            curr->next = createEntry($3->varname,$3->type,size,$4,NULL);
+            $$ = $1;
+        }
+        | ID DimDecl {
+            // Get total size of dimlist
+            int size = getArraySize($2);
+            // Create entry in the symbol table
+            $$ = createEntry($1->varname,$1->type,size,$2,NULL);
         }
         ;
 
 Slist : Slist Stmt {
-            $$ = createTree(0,"",TYPE_NULL,NULL,NODETYPE_CONNECTOR,$1,NULL,$2,NULL);
+            $$ = createTree(0,NULL,TYPE_NULL,NULL,NODETYPE_CONNECTOR,$1,NULL,$2,NULL);
         }
         | Stmt { $$ = $1; }
         ;
@@ -143,6 +172,15 @@ Stmt : InputStmt {
 InputStmt : READ '(' ID ')' ';' {
            $$ = createTree(0,NULL,TYPE_NULL,NULL,NODETYPE_READ,$3,NULL,NULL,NULL); 
         }
+        | READ '(' ID Dimlist ')' ';'{
+            // Fetch record containing the varname in the symbol table
+            Gsymbol* g = Lookup($3->varname);
+            // Fetch offset of the dimlist and store it in offset field
+            $3->offset = getArrayOffset(g->dimNode,$4);
+            $3->nodetype = NODETYPE_ARRAY;
+            $3->dimNode = $4;
+            $$ = createTree(0,NULL,TYPE_NULL,NULL,NODETYPE_READ,$3,NULL,NULL,NULL); 
+        }
         ;
 
 OutputStmt : WRITE '(' expr ')' ';' {
@@ -152,6 +190,15 @@ OutputStmt : WRITE '(' expr ')' ';' {
 
 AsgStmt : ID '=' expr ';' {
             $$ = createTree(0,"=",TYPE_NULL,NULL,NODETYPE_OP_ASSIGNMENT,$1,NULL,$3,NULL);
+        }
+        | ID Dimlist '=' expr ';' {
+            // Fetch record containing the varname in the symbol table
+            Gsymbol* g = Lookup($1->varname);
+            // Fetch offset of the dimlist and store it in offset field
+            $1->offset = getArrayOffset(g->dimNode,$2);
+            $1->nodetype = NODETYPE_ARRAY;
+            $1->dimNode = $2;
+            $$ = createTree(0,"=",TYPE_NULL,NULL,NODETYPE_OP_ASSIGNMENT,$1,NULL,$4,NULL);
         };
 
 IfStmt : IF expr THEN Slist ELSE Slist ENDIF ';' {
@@ -164,29 +211,56 @@ IfStmt : IF expr THEN Slist ELSE Slist ENDIF ';' {
 
 WhileStmt : WHILE expr  DO Slist ENDWHILE ';' {
                 $$ = createTree(0,NULL,TYPE_NULL,NULL,NODETYPE_WHILE,$2,NULL,$4,NULL);
+          }
+          ;
+
+BreakStmt : BREAK ';' {
+                $$ = createTree(0,NULL,TYPE_NULL,NULL,NODETYPE_BREAK,NULL,NULL,NULL,NULL);
+          };
+
+ContinueStmt : CONTINUE ';' {
+                $$ = createTree(0,NULL,TYPE_NULL,NULL,NODETYPE_CONTINUE,NULL,NULL,NULL,NULL);
+             };  
+
+DoWhileStmt : DO Slist WHILE expr ';' {
+                $$ = createTree(0,NULL,TYPE_NULL,NULL,NODETYPE_DO_WHILE,$4,NULL,$2,NULL);
             }
             ;
 
-BreakStmt : BREAK ';' {
-            $$ = createTree(0,NULL,TYPE_NULL,NULL,NODETYPE_BREAK,NULL,NULL,NULL,NULL);
-        };
+RepeatUntilStmt : REPEAT Slist UNTIL expr ';' {
+                    $$ = createTree(0,NULL,TYPE_NULL,NULL,NODETYPE_REPEAT_UNTIL,$4,NULL,$2,NULL);
+                };
+DimDecl: '[' NUM ']' DimDecl {
+                $$ = addDimension($2->val,$2,$4);
+            }
+            | '[' NUM ']' {
+                $$ = addDimension($2->val,$2,NULL);
+            }
+            ;
 
-ContinueStmt : CONTINUE ';' {
-            $$ = createTree(0,NULL,TYPE_NULL,NULL,NODETYPE_CONTINUE,NULL,NULL,NULL,NULL);
-        };
-
-DoWhileStmt : DO Slist WHILE expr ';' {
-            $$ = createTree(0,NULL,TYPE_NULL,NULL,NODETYPE_DO_WHILE,$4,NULL,$2,NULL);
+Dimlist : '[' expr ']' Dimlist {
+            if($2->type != TYPE_INT){
+                fprintf(stderr,"int type is required for indexing");
+                exit(1);
+            }
+            $$ = addDimension($2->val,$2,$4);
+        }   
+        | '[' expr ']' {
+            if($2->type != TYPE_INT){
+                fprintf(stderr,"int type is required for indexing");
+                exit(1);
+            }
+            $$ = addDimension($2->val,$2,NULL);
         }
         ;
 
-RepeatUntilStmt : REPEAT Slist UNTIL expr ';' {
-            $$ = createTree(0,NULL,TYPE_NULL,NULL,NODETYPE_REPEAT_UNTIL,$4,NULL,$2,NULL);
-        };
-
 expr:
     expr PLUS expr {
-        $$ = createTree(0,"+",TYPE_INT,NULL,NODETYPE_OP_ARITHMETIC,$1,NULL,$3,NULL);
+        int type = TYPE_INT;
+        if($1->type==TYPE_STRING||$3->type==TYPE_STRING){
+            type = TYPE_STRING;
+        }
+        $$ = createTree(0,"+",type,NULL,NODETYPE_OP_ARITHMETIC,$1,NULL,$3,NULL);
     }
     | expr MINUS expr {
         $$ = createTree(0,"-",TYPE_INT,NULL,NODETYPE_OP_ARITHMETIC,$1,NULL,$3,NULL);
@@ -218,39 +292,59 @@ expr:
     | '(' expr ')' {
         $$ = $2;
     }
+    | ID Dimlist {
+        // Fetch record containing the varname in the symbol table
+        Gsymbol* g = Lookup($1->varname);
+        $1->type = g->type;
+        $1->nodetype = NODETYPE_ARRAY;
+        $1->dimNode = $2;
+        // Fetch offset of the dimlist and store it in offset field
+        $1->offset = getArrayOffset(g->dimNode,$2);
+        $$ = $1;
+    }
+    | ID {
+        Gsymbol* g = Lookup($1->varname);
+        $1->type = g->type;
+        $$ = $1;
+    }
     | NUM {
         $$ = $1;
     }
     | STR {
         $$ = $1;
-    }| ID {
-        tnode* node = $1;
-        Gsymbol* g = Lookup(node->varname);
-        if(g==NULL){
-            printf("Error: Variable not declared\n");
-            exit(1);
-        }
-        node->type = g->type;
-        $$ = node;
     }
     ;
 
 %%
 
-void yyerror(char* s){
-    printf("%s\n", s);
+void yyerror(char *s) {
+    fprintf(stderr,
+        "Syntax error: %s at line %d near '%s'\n",
+        s,
+        yylloc.first_line,
+        yytext
+    );
+}
+
+void code_generate(){
+    codegen_generate_header();
+    stack_top = nextBinding-1;
+    codegen_initialize_stack(stack_top);
+    codegen(head,-1,-1);
+    codegen_add_breakpoint();
+    codegen_call_exit();
+}
+
+void free_memory(){
+    freeTree(head);
+    FreeGsymbolList(tableHead);
 }
 
 int main(){
     yyin = fopen("../input.txt", "r");
     yyparse();
     target_file = fopen("../target_file.xsm","w");
-    generateHeader();
-    initializeStack(4095+26);
-    codeGen(head,-1,-1);
-    addBreakpoint();
-    callExit();
-    freeTree(head);
-    FreeGsymbolList(tableHead);
+    code_generate();
+    free_memory();
     return 0;
 }
