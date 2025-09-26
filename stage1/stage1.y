@@ -83,18 +83,18 @@ void prefixprint(tnode* t){
 
 int main(){
     yyin = fopen("a.txt", "r");
-    /* target_file = fopen("target_file.xsm","w");
+    target_file = fopen("target_file.xsm","w");
     generateHeader();
     initializeStack(4096);
     yyparse();
     codeGen(head);
     storeInStack(current_register,4096);
     printAddress(4096);
-    callExit(); */
-     yyparse();
+    callExit();
+     /* yyparse();
     postfixprint(head);
     printf("\n");
     prefixprint(head);
-    printf("\n");
+    printf("\n"); */
     return 0;
 }
