@@ -1,6 +1,6 @@
 begin
     a = 10;
-    b = 20;
+    b = 21;
     d = a + b;
-    write(1);
+    write(d);
 end;

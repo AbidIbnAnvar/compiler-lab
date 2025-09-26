@@ -70,8 +70,8 @@
 
     #include<stdio.h>
     #include <stdlib.h>
-    // #include "code_generator.c"
-    #include "interpreter.c"
+    #include "code_generator.c"
+    // #include "interpreter.c"
     #include "tree.h"
     #include "helper.c"
     #include <string.h>
@@ -1747,13 +1747,13 @@ void prefixprint(tnode* t){
 int main(){
     yyin = fopen("input.txt", "r");
     yyparse();
-    prefixprint(head);
-    printf("\n");
-    /* target_file = fopen("target_file.xsm","w");
+    /* prefixprint(head);
+    printf("\n"); */
+    target_file = fopen("target_file.xsm","w");
     generateHeader();
     initializeStack(4095+26);
     codeGen(head);
-    callExit(); */
-    evaluate_tree(head);
+    callExit();
+    /* evaluate_tree(head); */
     return 0;
 }
