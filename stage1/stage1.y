@@ -28,20 +28,20 @@ Program : expr NL {
 }
 
 expr:
-     PLUS expr expr {
-        tnode* op = makeOperatorNode("+",$2,$3);
+      expr PLUS expr {
+        tnode* op = makeOperatorNode("+",$1,$3);
         $$ = op;
     }
-    | MINUS expr expr {
-        tnode* op = makeOperatorNode("-",$2,$3);
+    |  expr MINUS expr {
+        tnode* op = makeOperatorNode("-",$1,$3);
         $$ = op;
     }
-    | MUL expr expr {
-        tnode* op = makeOperatorNode("*",$2,$3);
+    |  expr MUL expr {
+        tnode* op = makeOperatorNode("*",$1,$3);
         $$ = op;
     }
-    | DIV expr expr {
-        tnode* op = makeOperatorNode("/",$2,$3);
+    |  expr DIV expr {
+        tnode* op = makeOperatorNode("/",$1,$3);
         $$ = op;
     }
     | '(' expr ')' {
@@ -59,6 +59,7 @@ void yyerror(char* s){
 }
 
 void postfixprint(tnode* t){
+    if(!t){return;}
     if(!t->left && !t->right){
         printf("%d ", t->val);
         return;
@@ -82,17 +83,18 @@ void prefixprint(tnode* t){
 
 int main(){
     yyin = fopen("a.txt", "r");
-    target_file = fopen("target_file.xsm","w");
+    /* target_file = fopen("target_file.xsm","w");
     generateHeader();
     initializeStack(4096);
     yyparse();
     codeGen(head);
     storeInStack(current_register,4096);
     printAddress(4096);
-    callExit();
-    /* postfixprint(head);
+    callExit(); */
+     yyparse();
+    postfixprint(head);
     printf("\n");
     prefixprint(head);
-    printf("\n"); */
+    printf("\n");
     return 0;
 }
