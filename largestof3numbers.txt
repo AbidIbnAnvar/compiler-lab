@@ -1,0 +1,20 @@
+begin
+    a = 1;
+    b = 3;
+    c = 2;
+    d = 0;
+    if(a>b) then
+        if(a>c) then
+            d = a;
+        else 
+            d = c;
+        endif;
+    else
+        if(b>c) then
+            d = b;
+        else 
+            d = c;
+        endif;
+    endif;
+    write(d);
+end;
