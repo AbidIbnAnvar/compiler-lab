@@ -1,10 +1,8 @@
 begin
-    b = 0;
-    a = 0;
-    read(a);
-    while(a!=0) do
-        b = b+a;
+    s= 0;
+    do
         read(a);
-    endwhile;
-    write(b);
+        s= s+a;
+        write(s);
+    while(s<10);
 end;

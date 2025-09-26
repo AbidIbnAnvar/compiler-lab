@@ -1,10 +1,10 @@
 begin
-    b = 0;
-    a = 0;
-    read(a);
-    while(a!=0) do
-        b = b+a;
-        read(a);
+    read(n);
+    i = 0;
+    s = 0;
+    while(i<=n) do
+        s = s + i;
+        i = i + 1;
     endwhile;
-    write(b);
+    write(s);
 end;
