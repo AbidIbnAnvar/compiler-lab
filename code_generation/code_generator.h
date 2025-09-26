@@ -37,7 +37,8 @@ void codegen_jump_to_label(int label);
 void codegen_jump_to_label_if_zero(reg_index r, int label);
 void codegen_jump_to_label_if_not_zero(reg_index r, int label);
 void codegen_label_definition(int label);
-void codegen_set_value_to_register(reg_index r, int value);
+void codegen_set_int_value_to_register(reg_index r, int value);
+void codegen_set_str_value_to_register(reg_index r, char* value);
 
 void codegen_generate_header();
 void codegen_add_breakpoint();

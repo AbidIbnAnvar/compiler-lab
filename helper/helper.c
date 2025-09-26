@@ -148,7 +148,7 @@ const char *type_to_string(Type type)
         return "BOOL";
     case TYPE_INT:
         return "INT";
-    case TYPE_STRING:
+    case TYPE_STR:
         return "STRING";
     default:
         return "UNKNOWN";

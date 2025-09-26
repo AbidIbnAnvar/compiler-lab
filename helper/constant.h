@@ -8,7 +8,8 @@ typedef enum Type
     TYPE_NULL,
     TYPE_BOOL,
     TYPE_INT,
-    TYPE_STRING
+    TYPE_STR,
+    TYPE_PTR,
 } Type;
 
 typedef enum NodeType
@@ -29,29 +30,32 @@ typedef enum NodeType
     NODETYPE_TYPE,
     NODETYPE_DECLARATION,
     NODETYPE_DECLARATION_BLOCK,
-    NODETYPE_ARRAY
+    NODETYPE_ARRAY,
+    NODETYPE_ACCESS,
+    NODETYPE_REF
 } NodeType;
 
 typedef struct tnode
 {
-    int val;
-    int offset;
-    Type type;
-    char *op;
-    char *varname;
-    NodeType nodetype;
-    struct Gsymbol *Gentry;
-    struct dimNode *dimNode;
+    int val;                 // for num
+    char *strval;            // for str
+    Type type;               // value type
+    char *op;                // operator symbol (for arithmetic operations)
+    char *varname;           // variable name
+    NodeType nodetype;       // to know info about node
+    struct Gsymbol *Gentry;  // not used
+    struct dimNode *dimNode; // for accessing dimensions (for arrays)
     struct tnode *left, *right, *middle;
 } tnode;
 
 typedef struct Gsymbol
 {
-    char *name;
-    int type;
-    int size;
-    int binding;
-    struct dimNode *dimNode;
+    char *name;              // variable name
+    int type;                // variable type
+    int vartype;             // variable's base type (for pointers)
+    int size;                // variable size
+    int binding;             // variable binding in stack
+    struct dimNode *dimNode; // to track declared dimension (for arrays)
     struct Gsymbol *next;
 } Gsymbol;
 

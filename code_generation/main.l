@@ -43,7 +43,8 @@ LETTER [a-z]
 }
 
 \"[^"\n]*\" {
-    yylval.node = createTree(0,NULL,TYPE_STRING,strdup(yytext),NODETYPE_LEAF,NULL,NULL,NULL,NULL);
+    yylval.node = createTree(0,NULL,TYPE_STR,NULL,NODETYPE_LEAF,NULL,NULL,NULL,NULL);
+    yylval.node->strval = strdup(yytext);
     return STR;
 }
 
@@ -66,6 +67,8 @@ LETTER [a-z]
 "," {return ',';}
 "[" {return '[';}
 "]" {return ']';}
+
+"&" {return '&';}
 
 [ \t\n] {}
 . {}

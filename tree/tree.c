@@ -31,7 +31,6 @@ tnode *createTree(int val, char *op, Type type, char *c, NodeType nodetype, tnod
     }
     tnode *tree = (tnode *)malloc(sizeof(tnode));
     tree->val = val;
-    tree->offset = 0;
     tree->type = type;
     tree->op = op;
     tree->varname = c;
@@ -61,9 +60,15 @@ void print_tree_structure(tnode *root, char *prefix, int is_last, int is_root)
         printf("var:%s ", root->varname);
     if (root->op)
         printf("op:%s ", root->op);
-    printf("val:%d type:%s", root->val, type_to_string(root->type));
-    if (root->offset != 0)
-        printf(" offset:%d", root->offset);
+    printf("type:%s ", type_to_string(root->type));
+    if (root->type == TYPE_INT)
+    {
+        printf("val:%d ", root->val);
+    }
+    if (root->type == TYPE_STR)
+    {
+        printf("val:%s ", root->strval);
+    }
     printf("\n");
 
     // Count non-null children

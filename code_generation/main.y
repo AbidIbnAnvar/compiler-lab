@@ -97,7 +97,7 @@ Type : INT_TYPE {
         $$ = TYPE_INT;
     } 
     | STR_TYPE {
-        $$ = TYPE_STRING;
+        $$ = TYPE_STR;
     }
     ;
 
@@ -131,6 +131,9 @@ VarList : VarList ',' ID {
             int size = getArraySize($2);
             // Create entry in the symbol table
             $$ = createEntry($1->varname,$1->type,size,$2,NULL);
+        }
+        | '*' ID {
+            $$ = createEntry($2->varname,TYPE_PTR,2,NULL,NULL);
         }
         ;
 
@@ -175,8 +178,6 @@ InputStmt : READ '(' ID ')' ';' {
         | READ '(' ID Dimlist ')' ';'{
             // Fetch record containing the varname in the symbol table
             Gsymbol* g = Lookup($3->varname);
-            // Fetch offset of the dimlist and store it in offset field
-            $3->offset = getArrayOffset(g->dimNode,$4);
             $3->nodetype = NODETYPE_ARRAY;
             $3->dimNode = $4;
             $$ = createTree(0,NULL,TYPE_NULL,NULL,NODETYPE_READ,$3,NULL,NULL,NULL); 
@@ -194,12 +195,14 @@ AsgStmt : ID '=' expr ';' {
         | ID Dimlist '=' expr ';' {
             // Fetch record containing the varname in the symbol table
             Gsymbol* g = Lookup($1->varname);
-            // Fetch offset of the dimlist and store it in offset field
-            $1->offset = getArrayOffset(g->dimNode,$2);
             $1->nodetype = NODETYPE_ARRAY;
             $1->dimNode = $2;
             $$ = createTree(0,"=",TYPE_NULL,NULL,NODETYPE_OP_ASSIGNMENT,$1,NULL,$4,NULL);
-        };
+        }
+        | '*' ID '=' expr ';' {
+            
+        }
+        ;
 
 IfStmt : IF expr THEN Slist ELSE Slist ENDIF ';' {
             $$ = createTree(0,NULL,TYPE_NULL,NULL,NODETYPE_IF,$2,$4,$6,NULL); 
@@ -239,14 +242,14 @@ DimDecl: '[' NUM ']' DimDecl {
             ;
 
 Dimlist : '[' expr ']' Dimlist {
-            if($2->type != TYPE_INT){
+            if($2->type == TYPE_STR){
                 fprintf(stderr,"int type is required for indexing");
                 exit(1);
             }
             $$ = addDimension($2->val,$2,$4);
         }   
         | '[' expr ']' {
-            if($2->type != TYPE_INT){
+            if($2->type == TYPE_STR){
                 fprintf(stderr,"int type is required for indexing");
                 exit(1);
             }
@@ -257,8 +260,8 @@ Dimlist : '[' expr ']' Dimlist {
 expr:
     expr PLUS expr {
         int type = TYPE_INT;
-        if($1->type==TYPE_STRING||$3->type==TYPE_STRING){
-            type = TYPE_STRING;
+        if($1->type==TYPE_STR||$3->type==TYPE_STR){
+            type = TYPE_STR;
         }
         $$ = createTree(0,"+",type,NULL,NODETYPE_OP_ARITHMETIC,$1,NULL,$3,NULL);
     }
@@ -298,9 +301,13 @@ expr:
         $1->type = g->type;
         $1->nodetype = NODETYPE_ARRAY;
         $1->dimNode = $2;
-        // Fetch offset of the dimlist and store it in offset field
-        $1->offset = getArrayOffset(g->dimNode,$2);
         $$ = $1;
+    }
+    | '*' ID {
+        $$ = createTree(0,"*",TYPE_NULL,NULL,NODETYPE_ACCESS,$2,NULL,NULL,NULL);
+    }
+    | '&' ID {
+        $$ = createTree(0,"&",TYPE_NULL,NULL,NODETYPE_REF,$2,NULL,NULL,NULL);
     }
     | ID {
         Gsymbol* g = Lookup($1->varname);

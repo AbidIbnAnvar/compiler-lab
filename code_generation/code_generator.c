@@ -68,14 +68,12 @@ reg_index codegen(tnode *t, int startLabel, int endLabel)
         }
         else
         {
-            // Get symbol table entry for the array variable
+            // Get symbol table entry for the variable
             Gsymbol *g = Lookup(t->left->varname);
-            // Get starting offset of the array
+            // Get starting offset of the variable
             int startOffset = g->binding;
-            // Get the offset inside the brackets
-            int offset = t->left->offset;
 
-            codegen_read_to_address(startOffset + offset);
+            codegen_read_to_address(startOffset);
         }
         return current_register;
     }
@@ -103,10 +101,15 @@ reg_index codegen(tnode *t, int startLabel, int endLabel)
             r = codegen_read_from_stack(offset);
         }
         // if a number is put inside write
-        else
+        else if (isLeafNode(t->left) && t->left->type == TYPE_INT)
         {
             r = getReg();
-            codegen_set_value_to_register(r, t->left->val);
+            codegen_set_int_value_to_register(r, t->left->val);
+        }
+        else if (isLeafNode(t->left) && t->left->type == TYPE_STR)
+        {
+            r = getReg();
+            codegen_set_str_value_to_register(r, t->left->strval);
         }
         codegen_print_register(r);
         return current_register;
@@ -199,14 +202,27 @@ reg_index codegen_evaluate_expression(tnode *t)
         codegen_read_from_stack_with_register(binding);
         return binding;
     }
-    // If the node is leaf node, then it is either a variable or a number
+    // If the node is leaf node, then it is either a variable or a number or a string
     if (isLeafNode(t))
     {
         reg_index r = getReg();
-        // if the node is a number
+        // if the node is a number or string
         if (t->varname == NULL)
         {
-            fprintf(target_file, "MOV R%d,%d\n", r, t->val);
+            if (t->type == TYPE_INT)
+            {
+                codegen_set_int_value_to_register(r, t->val);
+            }
+            else if (t->type == TYPE_STR && t->strval != NULL)
+            {
+                codegen_set_str_value_to_register(r, t->strval);
+            }
+            else
+            {
+                printTree(t);
+                fprintf(stderr, "Invalid expression");
+                exit(1);
+            }
         }
         // If the node is a variable
         else
@@ -229,7 +245,7 @@ reg_index codegen_array(tnode *t)
     Gsymbol *g = Lookup(t->varname);
     reg_index r = codegen_get_array_offset(g->dimNode, t->dimNode);
     reg_index binding = getReg();
-    codegen_set_value_to_register(binding, g->binding);
+    codegen_set_int_value_to_register(binding, g->binding);
     codegen_add_two_registers(r, binding);
     return r;
 }
@@ -269,7 +285,7 @@ reg_index codegen_get_array_offset(dimNode *decl, dimNode *node)
 
     reg_index valReg = codegen_evaluate_expression(node->tnode);
     reg_index productReg = getReg();
-    codegen_set_value_to_register(productReg, product);
+    codegen_set_int_value_to_register(productReg, product);
     codegen_multiply_two_registers(valReg, productReg);
     codegen_add_two_registers(offsetReg, valReg);
     return offsetReg;
@@ -421,9 +437,14 @@ void codegen_label_definition(int label)
     fprintf(target_file, "L%d:", label);
 }
 
-void codegen_set_value_to_register(reg_index r, int value)
+void codegen_set_int_value_to_register(reg_index r, int value)
 {
     fprintf(target_file, "MOV R%d,%d\n", r, value);
+}
+
+void codegen_set_str_value_to_register(reg_index r, char *value)
+{
+    fprintf(target_file, "MOV R%d,%s\n", r, value);
 }
 
 void codegen_generate_header()

@@ -1,52 +1,17 @@
 decl
-    int i,j,k,n;
-    int a[2][2],b[2][2],c[2][2];
+    int num, sum;
+    str mesg;
 enddecl
 
-n = 2;
-i = 0;
-while (i<n) do
-    j = 0;
-    while (j<n) do
-        read(a[i][j]);
-        j = j + 1;
-    endwhile;
-    i = i + 1;
+read(num);
+sum = 0;
+while (num != 0) do
+  sum = sum + num;
+  read(num);
 endwhile;
-
-i = 0;
-while (i<n) do
-    j = 0;
-    while (j<n) do
-        read(b[i][j]);
-        j = j + 1;
-    endwhile;
-    i = i + 1;
-endwhile;
-
-i = 0; j = 0; k = 0;
-while (i<n) do
-    k = 0;
-    while (k<n) do 
-        c[i][k] = 0;
-        j = 0;
-        while (j<n) do
-            c[i][k] = c[i][k] + a[i][j] * b[j][k]; 
-            j = j + 1;
-        endwhile;
-        k = k + 1;
-    endwhile;
-    i = i + 1;
-endwhile;
-
-i = 0;
-while (i<n) do
-    j = 0;
-    while (j<n) do
-        write(c[i][j]);
-        j = j + 1;
-    endwhile;
-    i = i + 1;
-endwhile;
+write("sum is:");
+write(sum);
+mesg = "good bye";
+write(mesg);
 
 

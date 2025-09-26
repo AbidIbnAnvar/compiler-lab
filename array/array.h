@@ -8,6 +8,4 @@
 
 dimNode *addDimension(int val, tnode *tnode, dimNode *next);
 int getArraySize(dimNode *node);
-int getArrayOffset(dimNode *head, dimNode *node);
-
 #endif

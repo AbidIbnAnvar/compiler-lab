@@ -606,10 +606,10 @@ static const yytype_int16 yyrline[] =
 {
        0,    56,    56,    62,    66,    71,    79,    84,    96,    99,
      104,   114,   117,   129,   137,   140,   143,   146,   149,   152,
-     155,   158,   161,   164,   167,   172,   175,   186,   191,   194,
-     204,   207,   212,   217,   221,   225,   230,   233,   236,   241,
-     248,   258,   265,   268,   271,   274,   277,   280,   283,   286,
-     289,   292,   295,   305,   310,   313
+     155,   158,   161,   164,   167,   172,   175,   184,   189,   192,
+     200,   203,   208,   213,   217,   221,   226,   229,   232,   237,
+     244,   254,   261,   264,   267,   270,   273,   276,   279,   282,
+     285,   288,   291,   299,   304,   307
 };
 #endif
 
@@ -1682,7 +1682,7 @@ yyreduce:
   case 9:
 #line 99 "main.y"
                {
-        (yyval.var_type) = TYPE_STRING;
+        (yyval.var_type) = TYPE_STR;
     }
 #line 1688 "y.tab.c"
     break;
@@ -1837,276 +1837,270 @@ yyreduce:
                                      {
             // Fetch record containing the varname in the symbol table
             Gsymbol* g = Lookup((yyvsp[-3].node)->varname);
-            // Fetch offset of the dimlist and store it in offset field
-            (yyvsp[-3].node)->offset = getArrayOffset(g->dimNode,(yyvsp[-2].dim));
             (yyvsp[-3].node)->nodetype = NODETYPE_ARRAY;
             (yyvsp[-3].node)->dimNode = (yyvsp[-2].dim);
             (yyval.node) = createTree(0,NULL,TYPE_NULL,NULL,NODETYPE_READ,(yyvsp[-3].node),NULL,NULL,NULL); 
         }
-#line 1847 "y.tab.c"
+#line 1845 "y.tab.c"
     break;
 
   case 27:
-#line 186 "main.y"
+#line 184 "main.y"
                                     {
            (yyval.node) = createTree(0,NULL,TYPE_NULL,NULL,NODETYPE_WRITE,(yyvsp[-2].node),NULL,NULL,NULL); 
         }
-#line 1855 "y.tab.c"
+#line 1853 "y.tab.c"
     break;
 
   case 28:
-#line 191 "main.y"
+#line 189 "main.y"
                           {
             (yyval.node) = createTree(0,"=",TYPE_NULL,NULL,NODETYPE_OP_ASSIGNMENT,(yyvsp[-3].node),NULL,(yyvsp[-1].node),NULL);
         }
-#line 1863 "y.tab.c"
+#line 1861 "y.tab.c"
     break;
 
   case 29:
-#line 194 "main.y"
+#line 192 "main.y"
                                   {
             // Fetch record containing the varname in the symbol table
             Gsymbol* g = Lookup((yyvsp[-4].node)->varname);
-            // Fetch offset of the dimlist and store it in offset field
-            (yyvsp[-4].node)->offset = getArrayOffset(g->dimNode,(yyvsp[-3].dim));
             (yyvsp[-4].node)->nodetype = NODETYPE_ARRAY;
             (yyvsp[-4].node)->dimNode = (yyvsp[-3].dim);
             (yyval.node) = createTree(0,"=",TYPE_NULL,NULL,NODETYPE_OP_ASSIGNMENT,(yyvsp[-4].node),NULL,(yyvsp[-1].node),NULL);
         }
-#line 1877 "y.tab.c"
+#line 1873 "y.tab.c"
     break;
 
   case 30:
-#line 204 "main.y"
+#line 200 "main.y"
                                                  {
             (yyval.node) = createTree(0,NULL,TYPE_NULL,NULL,NODETYPE_IF,(yyvsp[-6].node),(yyvsp[-4].node),(yyvsp[-2].node),NULL); 
         }
-#line 1885 "y.tab.c"
+#line 1881 "y.tab.c"
     break;
 
   case 31:
-#line 207 "main.y"
+#line 203 "main.y"
                                        { 
             (yyval.node) = createTree(0,NULL,TYPE_NULL,NULL,NODETYPE_IF,(yyvsp[-4].node),(yyvsp[-2].node),NULL,NULL);
         }
-#line 1893 "y.tab.c"
+#line 1889 "y.tab.c"
     break;
 
   case 32:
-#line 212 "main.y"
+#line 208 "main.y"
                                               {
                 (yyval.node) = createTree(0,NULL,TYPE_NULL,NULL,NODETYPE_WHILE,(yyvsp[-4].node),NULL,(yyvsp[-2].node),NULL);
           }
-#line 1901 "y.tab.c"
+#line 1897 "y.tab.c"
     break;
 
   case 33:
-#line 217 "main.y"
+#line 213 "main.y"
                       {
                 (yyval.node) = createTree(0,NULL,TYPE_NULL,NULL,NODETYPE_BREAK,NULL,NULL,NULL,NULL);
           }
-#line 1909 "y.tab.c"
+#line 1905 "y.tab.c"
     break;
 
   case 34:
-#line 221 "main.y"
+#line 217 "main.y"
                             {
                 (yyval.node) = createTree(0,NULL,TYPE_NULL,NULL,NODETYPE_CONTINUE,NULL,NULL,NULL,NULL);
              }
-#line 1917 "y.tab.c"
+#line 1913 "y.tab.c"
     break;
 
   case 35:
-#line 225 "main.y"
+#line 221 "main.y"
                                       {
                 (yyval.node) = createTree(0,NULL,TYPE_NULL,NULL,NODETYPE_DO_WHILE,(yyvsp[-1].node),NULL,(yyvsp[-3].node),NULL);
             }
-#line 1925 "y.tab.c"
+#line 1921 "y.tab.c"
     break;
 
   case 36:
-#line 230 "main.y"
+#line 226 "main.y"
                                               {
                     (yyval.node) = createTree(0,NULL,TYPE_NULL,NULL,NODETYPE_REPEAT_UNTIL,(yyvsp[-1].node),NULL,(yyvsp[-3].node),NULL);
                 }
-#line 1933 "y.tab.c"
+#line 1929 "y.tab.c"
     break;
 
   case 37:
-#line 233 "main.y"
+#line 229 "main.y"
                              {
                 (yyval.dim) = addDimension((yyvsp[-2].node)->val,(yyvsp[-2].node),(yyvsp[0].dim));
             }
-#line 1941 "y.tab.c"
+#line 1937 "y.tab.c"
     break;
 
   case 38:
-#line 236 "main.y"
+#line 232 "main.y"
                           {
                 (yyval.dim) = addDimension((yyvsp[-1].node)->val,(yyvsp[-1].node),NULL);
             }
-#line 1949 "y.tab.c"
+#line 1945 "y.tab.c"
     break;
 
   case 39:
-#line 241 "main.y"
+#line 237 "main.y"
                                {
-            if((yyvsp[-2].node)->type != TYPE_INT){
+            if((yyvsp[-2].node)->type == TYPE_STR){
                 fprintf(stderr,"int type is required for indexing");
                 exit(1);
             }
             (yyval.dim) = addDimension((yyvsp[-2].node)->val,(yyvsp[-2].node),(yyvsp[0].dim));
         }
-#line 1961 "y.tab.c"
+#line 1957 "y.tab.c"
     break;
 
   case 40:
-#line 248 "main.y"
+#line 244 "main.y"
                        {
-            if((yyvsp[-1].node)->type != TYPE_INT){
+            if((yyvsp[-1].node)->type == TYPE_STR){
                 fprintf(stderr,"int type is required for indexing");
                 exit(1);
             }
             (yyval.dim) = addDimension((yyvsp[-1].node)->val,(yyvsp[-1].node),NULL);
         }
-#line 1973 "y.tab.c"
+#line 1969 "y.tab.c"
     break;
 
   case 41:
-#line 258 "main.y"
+#line 254 "main.y"
                    {
         int type = TYPE_INT;
-        if((yyvsp[-2].node)->type==TYPE_STRING||(yyvsp[0].node)->type==TYPE_STRING){
-            type = TYPE_STRING;
+        if((yyvsp[-2].node)->type==TYPE_STR||(yyvsp[0].node)->type==TYPE_STR){
+            type = TYPE_STR;
         }
         (yyval.node) = createTree(0,"+",type,NULL,NODETYPE_OP_ARITHMETIC,(yyvsp[-2].node),NULL,(yyvsp[0].node),NULL);
     }
-#line 1985 "y.tab.c"
+#line 1981 "y.tab.c"
     break;
 
   case 42:
-#line 265 "main.y"
+#line 261 "main.y"
                       {
         (yyval.node) = createTree(0,"-",TYPE_INT,NULL,NODETYPE_OP_ARITHMETIC,(yyvsp[-2].node),NULL,(yyvsp[0].node),NULL);
     }
-#line 1993 "y.tab.c"
+#line 1989 "y.tab.c"
     break;
 
   case 43:
-#line 268 "main.y"
+#line 264 "main.y"
                     {
         (yyval.node) = createTree(0,"*",TYPE_INT,NULL,NODETYPE_OP_ARITHMETIC,(yyvsp[-2].node),NULL,(yyvsp[0].node),NULL);
     }
-#line 2001 "y.tab.c"
+#line 1997 "y.tab.c"
     break;
 
   case 44:
-#line 271 "main.y"
+#line 267 "main.y"
                     {
         (yyval.node) = createTree(0,"/",TYPE_INT,NULL,NODETYPE_OP_ARITHMETIC,(yyvsp[-2].node),NULL,(yyvsp[0].node),NULL);
     }
-#line 2009 "y.tab.c"
+#line 2005 "y.tab.c"
     break;
 
   case 45:
-#line 274 "main.y"
+#line 270 "main.y"
                    {
         (yyval.node) = createTree(0,"<",TYPE_INT,NULL,NODETYPE_OP_RELATIONAL,(yyvsp[-2].node),NULL,(yyvsp[0].node),NULL);
     }
-#line 2017 "y.tab.c"
+#line 2013 "y.tab.c"
     break;
 
   case 46:
-#line 277 "main.y"
+#line 273 "main.y"
                    {
         (yyval.node) = createTree(0,"<=",TYPE_INT,NULL,NODETYPE_OP_RELATIONAL,(yyvsp[-2].node),NULL,(yyvsp[0].node),NULL);
     }
-#line 2025 "y.tab.c"
+#line 2021 "y.tab.c"
     break;
 
   case 47:
-#line 280 "main.y"
+#line 276 "main.y"
                    {
         (yyval.node) = createTree(0,">",TYPE_INT,NULL,NODETYPE_OP_RELATIONAL,(yyvsp[-2].node),NULL,(yyvsp[0].node),NULL);
     }
-#line 2033 "y.tab.c"
+#line 2029 "y.tab.c"
     break;
 
   case 48:
-#line 283 "main.y"
+#line 279 "main.y"
                    {
         (yyval.node) = createTree(0,">=",TYPE_INT,NULL,NODETYPE_OP_RELATIONAL,(yyvsp[-2].node),NULL,(yyvsp[0].node),NULL);
     }
-#line 2041 "y.tab.c"
+#line 2037 "y.tab.c"
     break;
 
   case 49:
-#line 286 "main.y"
+#line 282 "main.y"
                    {
         (yyval.node) = createTree(0,"!=",TYPE_INT,NULL,NODETYPE_OP_RELATIONAL,(yyvsp[-2].node),NULL,(yyvsp[0].node),NULL);
     }
-#line 2049 "y.tab.c"
+#line 2045 "y.tab.c"
     break;
 
   case 50:
-#line 289 "main.y"
+#line 285 "main.y"
                    {
         (yyval.node) = createTree(0,"==",TYPE_INT,NULL,NODETYPE_OP_RELATIONAL,(yyvsp[-2].node),NULL,(yyvsp[0].node),NULL);
     }
-#line 2057 "y.tab.c"
+#line 2053 "y.tab.c"
     break;
 
   case 51:
-#line 292 "main.y"
+#line 288 "main.y"
                    {
         (yyval.node) = (yyvsp[-1].node);
     }
-#line 2065 "y.tab.c"
+#line 2061 "y.tab.c"
     break;
 
   case 52:
-#line 295 "main.y"
+#line 291 "main.y"
                  {
         // Fetch record containing the varname in the symbol table
         Gsymbol* g = Lookup((yyvsp[-1].node)->varname);
         (yyvsp[-1].node)->type = g->type;
         (yyvsp[-1].node)->nodetype = NODETYPE_ARRAY;
         (yyvsp[-1].node)->dimNode = (yyvsp[0].dim);
-        // Fetch offset of the dimlist and store it in offset field
-        (yyvsp[-1].node)->offset = getArrayOffset(g->dimNode,(yyvsp[0].dim));
         (yyval.node) = (yyvsp[-1].node);
     }
-#line 2080 "y.tab.c"
+#line 2074 "y.tab.c"
     break;
 
   case 53:
-#line 305 "main.y"
+#line 299 "main.y"
          {
         Gsymbol* g = Lookup((yyvsp[0].node)->varname);
         (yyvsp[0].node)->type = g->type;
         (yyval.node) = (yyvsp[0].node);
     }
-#line 2090 "y.tab.c"
+#line 2084 "y.tab.c"
     break;
 
   case 54:
-#line 310 "main.y"
+#line 304 "main.y"
           {
         (yyval.node) = (yyvsp[0].node);
     }
-#line 2098 "y.tab.c"
+#line 2092 "y.tab.c"
     break;
 
   case 55:
-#line 313 "main.y"
+#line 307 "main.y"
           {
         (yyval.node) = (yyvsp[0].node);
     }
-#line 2106 "y.tab.c"
+#line 2100 "y.tab.c"
     break;
 
 
-#line 2110 "y.tab.c"
+#line 2104 "y.tab.c"
 
       default: break;
     }
@@ -2344,7 +2338,7 @@ yyreturn:
 #endif
   return yyresult;
 }
-#line 318 "main.y"
+#line 312 "main.y"
 
 
 void yyerror(char *s) {

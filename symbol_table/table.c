@@ -30,8 +30,8 @@ struct Gsymbol *Lookup(char *name)
         }
         curr = curr->next;
     }
-        printf("Error: variable %s not declared", name);
-        exit(1);
+    printf("Error: variable %s not declared", name);
+    exit(1);
 
     return NULL;
 }
@@ -82,7 +82,7 @@ char *GetType(int type)
     {
     case TYPE_INT:
         return "int";
-    case TYPE_STRING:
+    case TYPE_STR:
         return "string";
     default:
         return "";
