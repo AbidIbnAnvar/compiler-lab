@@ -122,6 +122,26 @@ void prefixprint(tnode* t){
     return;
 }
 
+void inorder_print(tnode* t){
+    if(!t)return;
+    inorder_print(t->left);
+    if(t->nodetype==NODETYPE_CONNECTOR){
+            printf(" C ");
+        }
+        else if(t->nodetype==NODETYPE_OPERATOR || t->nodetype==NODETYPE_ASSIGNMENT){
+            printf(" %s ",t->op);
+        }
+        else if(t->nodetype==NODETYPE_LEAF){
+            if(t->varname!=NULL){
+                printf(" %s ",t->varname);
+            }else{
+                printf(" %d ",t->val);
+            }
+        }
+    inorder_print(t->right);
+    return;
+}
+
 int main(){
     yyin = fopen("input.txt", "r");
     yyparse();
@@ -133,5 +153,7 @@ int main(){
     codeGen(head);
     callExit();
     /* evaluate_tree(head); */
+    inorder_print(head);
+    printf("\n");
     return 0;
 }
