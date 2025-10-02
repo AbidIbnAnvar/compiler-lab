@@ -87,6 +87,16 @@ bool isArrayNode(tnode *t)
     return t && t->nodetype == NODETYPE_ARRAY;
 }
 
+bool isAccessNode(tnode *t)
+{
+    return t && t->nodetype == NODETYPE_ACCESS;
+}
+
+bool isRefNode(tnode *t)
+{
+    return t && t->nodetype == NODETYPE_REF;
+}
+
 bool matchesOperator(tnode *t, char *op)
 {
     return t && (strcmp(t->op, op) == 0);
@@ -193,6 +203,10 @@ const char *nodetype_to_string(NodeType nodetype)
         return "DECL_BLOCK";
     case NODETYPE_ARRAY:
         return "ARRAY";
+    case NODETYPE_REF:
+        return "REF";
+    case NODETYPE_ACCESS:
+        return "ACCESS";
     default:
         return "UNKNOWN";
     }

@@ -27,6 +27,7 @@ reg_index codegen_add_two_numbers(int num1, int num2);
 reg_index codegen_subtract_two_registers(reg_index r1, reg_index r2);
 reg_index codegen_multiply_two_registers(reg_index r1, reg_index r2);
 reg_index codegen_divide_two_registers(reg_index r1, reg_index r2);
+reg_index codegen_mod_two_registers(reg_index r1, reg_index r2);
 reg_index codegen_less_than_two_registers(reg_index left_expression, reg_index right_expression);
 reg_index codegen_less_than_equal_two_registers(reg_index left_expression, reg_index right_expression);
 reg_index codegen_greater_than_two_registers(reg_index left_expression, reg_index right_expression);
@@ -38,7 +39,7 @@ void codegen_jump_to_label_if_zero(reg_index r, int label);
 void codegen_jump_to_label_if_not_zero(reg_index r, int label);
 void codegen_label_definition(int label);
 void codegen_set_int_value_to_register(reg_index r, int value);
-void codegen_set_str_value_to_register(reg_index r, char* value);
+void codegen_set_str_value_to_register(reg_index r, char *value);
 
 void codegen_generate_header();
 void codegen_add_breakpoint();

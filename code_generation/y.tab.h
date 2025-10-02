@@ -56,29 +56,30 @@ extern int yydebug;
     MUL = 262,
     DIV = 263,
     MINUS = 264,
-    READ = 265,
-    WRITE = 266,
-    IF = 267,
-    THEN = 268,
-    ELSE = 269,
-    ENDIF = 270,
-    WHILE = 271,
-    DO = 272,
-    ENDWHILE = 273,
-    LT = 274,
-    LE = 275,
-    GT = 276,
-    GE = 277,
-    NE = 278,
-    EQ = 279,
-    BREAK = 280,
-    CONTINUE = 281,
-    REPEAT = 282,
-    UNTIL = 283,
-    DECL = 284,
-    ENDDECL = 285,
-    INT_TYPE = 286,
-    STR_TYPE = 287
+    MOD = 265,
+    READ = 266,
+    WRITE = 267,
+    IF = 268,
+    THEN = 269,
+    ELSE = 270,
+    ENDIF = 271,
+    WHILE = 272,
+    DO = 273,
+    ENDWHILE = 274,
+    LT = 275,
+    LE = 276,
+    GT = 277,
+    GE = 278,
+    NE = 279,
+    EQ = 280,
+    BREAK = 281,
+    CONTINUE = 282,
+    REPEAT = 283,
+    UNTIL = 284,
+    DECL = 285,
+    ENDDECL = 286,
+    INT_TYPE = 287,
+    STR_TYPE = 288
   };
 #endif
 /* Tokens.  */
@@ -89,29 +90,30 @@ extern int yydebug;
 #define MUL 262
 #define DIV 263
 #define MINUS 264
-#define READ 265
-#define WRITE 266
-#define IF 267
-#define THEN 268
-#define ELSE 269
-#define ENDIF 270
-#define WHILE 271
-#define DO 272
-#define ENDWHILE 273
-#define LT 274
-#define LE 275
-#define GT 276
-#define GE 277
-#define NE 278
-#define EQ 279
-#define BREAK 280
-#define CONTINUE 281
-#define REPEAT 282
-#define UNTIL 283
-#define DECL 284
-#define ENDDECL 285
-#define INT_TYPE 286
-#define STR_TYPE 287
+#define MOD 265
+#define READ 266
+#define WRITE 267
+#define IF 268
+#define THEN 269
+#define ELSE 270
+#define ENDIF 271
+#define WHILE 272
+#define DO 273
+#define ENDWHILE 274
+#define LT 275
+#define LE 276
+#define GT 277
+#define GE 278
+#define NE 279
+#define EQ 280
+#define BREAK 281
+#define CONTINUE 282
+#define REPEAT 283
+#define UNTIL 284
+#define DECL 285
+#define ENDDECL 286
+#define INT_TYPE 287
+#define STR_TYPE 288
 
 /* Value type.  */
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
@@ -124,7 +126,7 @@ union YYSTYPE
     int var_type;
     struct dimNode* dim;
 
-#line 128 "y.tab.h"
+#line 130 "y.tab.h"
 
 };
 typedef union YYSTYPE YYSTYPE;

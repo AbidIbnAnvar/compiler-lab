@@ -51,7 +51,7 @@ typedef struct tnode
 typedef struct Gsymbol
 {
     char *name;              // variable name
-    int type;                // variable type
+    Type type;               // variable type
     int vartype;             // variable's base type (for pointers)
     int size;                // variable size
     int binding;             // variable binding in stack

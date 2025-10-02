@@ -27,7 +27,7 @@
 
 
 %token<node> NUM ID STR
-%token PLUS MUL DIV MINUS
+%token PLUS MUL DIV MINUS MOD
 %token READ WRITE
 %token IF THEN ELSE ENDIF
 %token WHILE DO ENDWHILE
@@ -46,7 +46,7 @@
 %type <var_type> Type
 
 %left PLUS MINUS
-%left MUL DIV
+%left MUL DIV MOD
 
 %nonassoc LE LT GT GE NE EQ
 %locations
@@ -82,11 +82,14 @@ DeclList : DeclList Decl {
         ;
 
 Decl : Type VarList ';' {
-            // Get symbol table pointer for varlist
             Gsymbol* curr = $2;
-            // Assign type to all entries of varlist
             while(curr!=NULL){
-                curr->type = $1;
+                // set type to all except ptr variables
+                if(!curr->type || curr->type!=TYPE_PTR){
+                    curr->type = $1;
+                }else if(curr->type && curr->type!=TYPE_PTR){
+                    curr->vartype = $1;
+                }
                 curr = curr->next;
             }
             $$ = $2;
@@ -115,25 +118,29 @@ VarList : VarList ',' ID {
             $$ = createEntry($1->varname,$1->type,1,NULL,NULL);
         } 
         | VarList ',' ID DimDecl {
-            // Get symbol table pointer for varlist
             Gsymbol* curr = $1;
             while(curr!=NULL&&curr->next!=NULL){
                 curr = curr->next;
             }
-            // Get total size of dimlist
+
             int size = getArraySize($4);
-            // Append entry to the end of the symbol table
             curr->next = createEntry($3->varname,$3->type,size,$4,NULL);
             $$ = $1;
         }
         | ID DimDecl {
-            // Get total size of dimlist
             int size = getArraySize($2);
-            // Create entry in the symbol table
             $$ = createEntry($1->varname,$1->type,size,$2,NULL);
         }
-        | '*' ID {
-            $$ = createEntry($2->varname,TYPE_PTR,2,NULL,NULL);
+        | VarList ',' MUL ID {
+            Gsymbol* curr = $1;
+            while(curr!=NULL&&curr->next!=NULL){
+                curr = curr->next;
+            }
+            curr->next = createEntry($4->varname,TYPE_PTR,1,NULL,NULL);
+            $$ = $1;
+        }
+        | MUL ID {
+            $$ = createEntry($2->varname,TYPE_PTR,1,NULL,NULL);
         }
         ;
 
@@ -193,14 +200,14 @@ AsgStmt : ID '=' expr ';' {
             $$ = createTree(0,"=",TYPE_NULL,NULL,NODETYPE_OP_ASSIGNMENT,$1,NULL,$3,NULL);
         }
         | ID Dimlist '=' expr ';' {
-            // Fetch record containing the varname in the symbol table
             Gsymbol* g = Lookup($1->varname);
             $1->nodetype = NODETYPE_ARRAY;
             $1->dimNode = $2;
             $$ = createTree(0,"=",TYPE_NULL,NULL,NODETYPE_OP_ASSIGNMENT,$1,NULL,$4,NULL);
         }
-        | '*' ID '=' expr ';' {
-            
+        | MUL ID '=' expr ';' {
+            tnode* left = createTree(0,"*",TYPE_NULL,NULL,NODETYPE_ACCESS,$2,NULL,NULL,NULL);
+            $$ = createTree(0,"=",TYPE_NULL,NULL,NODETYPE_OP_ASSIGNMENT,left,NULL,$4,NULL);
         }
         ;
 
@@ -243,14 +250,14 @@ DimDecl: '[' NUM ']' DimDecl {
 
 Dimlist : '[' expr ']' Dimlist {
             if($2->type == TYPE_STR){
-                fprintf(stderr,"int type is required for indexing");
+                fprintf(stderr,"int type is required for indexing\n");
                 exit(1);
             }
             $$ = addDimension($2->val,$2,$4);
         }   
         | '[' expr ']' {
             if($2->type == TYPE_STR){
-                fprintf(stderr,"int type is required for indexing");
+                fprintf(stderr,"int type is required for indexing\n");
                 exit(1);
             }
             $$ = addDimension($2->val,$2,NULL);
@@ -274,6 +281,9 @@ expr:
     | expr DIV expr {
         $$ = createTree(0,"/",TYPE_INT,NULL,NODETYPE_OP_ARITHMETIC,$1,NULL,$3,NULL);
     }
+    | expr MOD expr {
+        $$ = createTree(0,"%",TYPE_INT,NULL,NODETYPE_OP_ARITHMETIC,$1,NULL,$3,NULL);
+    }
     | expr LT expr {
         $$ = createTree(0,"<",TYPE_INT,NULL,NODETYPE_OP_RELATIONAL,$1,NULL,$3,NULL);
     }
@@ -296,14 +306,18 @@ expr:
         $$ = $2;
     }
     | ID Dimlist {
-        // Fetch record containing the varname in the symbol table
         Gsymbol* g = Lookup($1->varname);
         $1->type = g->type;
         $1->nodetype = NODETYPE_ARRAY;
         $1->dimNode = $2;
         $$ = $1;
     }
-    | '*' ID {
+    | MUL ID {
+        Gsymbol* g = Lookup($2->varname);
+        if(g->type!=TYPE_PTR){
+            fprintf(stderr,"Trying to access non pointer values\n");
+            exit(1);
+        }
         $$ = createTree(0,"*",TYPE_NULL,NULL,NODETYPE_ACCESS,$2,NULL,NULL,NULL);
     }
     | '&' ID {

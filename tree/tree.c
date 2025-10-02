@@ -5,7 +5,7 @@ tnode *createTree(int val, char *op, Type type, char *c, NodeType nodetype, tnod
 {
     if (nodetype == NODETYPE_OP_ARITHMETIC)
     {
-        if (strcmp(op, "+") == 0 && ((l->type != TYPE_INT) || (r->type != TYPE_INT)))
+        if (strcmp(op, "+") == 0 && ((l->type != TYPE_INT && l->nodetype != NODETYPE_ACCESS) || (r->type != TYPE_INT && r->nodetype != NODETYPE_ACCESS)))
         {
             fprintf(stderr, "Error: Type Mismatch. Expected Integer\n");
             exit(1);

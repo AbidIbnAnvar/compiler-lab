@@ -35,18 +35,31 @@ reg_index codegen(tnode *t, int startLabel, int endLabel)
     {
         if (isAssignmentNode(t))
         {
-            if (isArrayNode(t->left))
+            reg_index r = codegen_evaluate_expression(t->right);
+            tnode *leftNode = t->left;
+            // Assignment to array
+            if (isArrayNode(leftNode))
             {
-                reg_index r = codegen_evaluate_expression(t->right);
-                reg_index binding = codegen_array(t->left);
+                reg_index binding = codegen_array(leftNode);
                 codegen_store_in_stack_with_registers(r, binding);
                 return current_register;
             }
+            // Assignment to pointer
+            else if (isAccessNode(leftNode))
+            {
+                // TODO:
+                Gsymbol *g = Lookup(leftNode->left->varname);
+                int binding = g->binding;
+                reg_index p = codegen_read_from_stack(binding);
+                codegen_store_in_stack_with_registers(r, p);
+                freeReg();
+                return current_register;
+            }
+            // Assignment to variable
             else
             {
-                Gsymbol *g = Lookup(t->left->varname);
+                Gsymbol *g = Lookup(leftNode->varname);
                 int startOffset = g->binding;
-                reg_index r = codegen_evaluate_expression(t->right);
                 codegen_store_in_stack(r, startOffset);
                 return current_register;
             }
@@ -85,14 +98,14 @@ reg_index codegen(tnode *t, int startLabel, int endLabel)
         {
             r = codegen_evaluate_expression(t->left);
         }
-        // if an array is inside write()
+        // array is inside write()
         else if (isArrayNode(t->left))
         {
             tnode *arrayNode = t->left;
             r = codegen_array(arrayNode);
             r = codegen_read_from_stack_with_register(r);
         }
-        // if a variable is inside write()
+        // variable is inside write()
         else if (isLeafNode(t->left) && t->left->varname != NULL)
         {
             Gsymbol *g = Lookup(t->left->varname);
@@ -100,12 +113,13 @@ reg_index codegen(tnode *t, int startLabel, int endLabel)
             int offset = g->binding;
             r = codegen_read_from_stack(offset);
         }
-        // if a number is put inside write
+        // number is put inside write
         else if (isLeafNode(t->left) && t->left->type == TYPE_INT)
         {
             r = getReg();
             codegen_set_int_value_to_register(r, t->left->val);
         }
+        // string is put inside write
         else if (isLeafNode(t->left) && t->left->type == TYPE_STR)
         {
             r = getReg();
@@ -196,14 +210,32 @@ reg_index codegen_evaluate_expression(tnode *t)
         return current_register;
     }
     // If the node is an array node
-    if (isArrayNode(t))
+    else if (isArrayNode(t))
     {
         reg_index binding = codegen_array(t);
         codegen_read_from_stack_with_register(binding);
         return binding;
     }
+    else if (isRefNode(t))
+    {
+        // TODO:
+        Gsymbol *g = Lookup(t->left->varname);
+        int binding = g->binding;
+        reg_index r = getReg();
+        codegen_set_int_value_to_register(r, binding);
+        return r;
+    }
+    else if (isAccessNode(t))
+    {
+        // TODO:
+        Gsymbol *g = Lookup(t->left->varname);
+        int binding = g->binding;
+        reg_index p = codegen_read_from_stack(binding); // contains values' address
+        codegen_read_from_stack_with_register(p);
+        return p;
+    }
     // If the node is leaf node, then it is either a variable or a number or a string
-    if (isLeafNode(t))
+    else if (isLeafNode(t))
     {
         reg_index r = getReg();
         // if the node is a number or string
@@ -309,6 +341,10 @@ reg_index codegen_operation(tnode *t, reg_index left_expression, reg_index right
     {
         codegen_divide_two_registers(left_expression, right_expression);
     }
+    else if (matchesOperator(t, "%"))
+    {
+        codegen_mod_two_registers(left_expression, right_expression);
+    }
     else if (matchesOperator(t, "<"))
     {
         codegen_less_than_two_registers(left_expression, right_expression);
@@ -371,6 +407,13 @@ reg_index codegen_multiply_two_registers(reg_index r1, reg_index r2)
 reg_index codegen_divide_two_registers(reg_index r1, reg_index r2)
 {
     fprintf(target_file, "DIV R%d,R%d\n", r1, r2);
+    freeReg();
+    return current_register;
+}
+
+reg_index codegen_mod_two_registers(reg_index r1, reg_index r2)
+{
+    fprintf(target_file, "MOD R%d,R%d\n", r1, r2);
     freeReg();
     return current_register;
 }
@@ -559,6 +602,7 @@ void codegen_read_to_address(int addr)
     fprintf(target_file, "POP R%d\n", current_register);
     fprintf(target_file, "POP R%d\n", current_register);
     fprintf(target_file, "POP R%d\n", current_register);
+    freeReg();
 }
 
 void codegen_read_to_register(reg_index reg)

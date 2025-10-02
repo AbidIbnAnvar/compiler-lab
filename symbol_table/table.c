@@ -61,19 +61,19 @@ void Install(char *name, int type, int size)
 void ShowTable(Gsymbol *g)
 {
     Gsymbol *curr = g;
-    printf("+----------------+--------+------+---------+\n");
-    printf("| Name           | Type   | Size | Binding |\n");
-    printf("+----------------+--------+------+---------+\n");
+    printf("+----------------+--------+--------+------+---------+\n");
+    printf("| Name           | Type   | Base   | Size | Binding |\n");
+    printf("+----------------+--------+--------+------+---------+\n");
 
     while (curr != NULL)
     {
         // Adjust field widths as needed for your actual data
-        printf("| %-14s | %-6s | %-4d | %-7d |\n",
-               curr->name, GetType(curr->type), curr->size, curr->binding);
+        printf("| %-14s | %-6s | %-6s | %-4d | %-7d |\n",
+               curr->name, GetType(curr->type), GetType(curr->vartype), curr->size, curr->binding);
         curr = curr->next;
     }
 
-    printf("+----------------+--------+------+---------+\n");
+    printf("+----------------+--------+--------+------+---------+\n");
 }
 
 char *GetType(int type)
@@ -84,8 +84,12 @@ char *GetType(int type)
         return "int";
     case TYPE_STR:
         return "string";
+    case TYPE_BOOL:
+        return "bool";
+    case TYPE_PTR:
+        return "ptr";
     default:
-        return "";
+        return "-";
     }
 }
 

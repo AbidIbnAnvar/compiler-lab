@@ -22,6 +22,8 @@ bool isDoWhileNode(tnode *t);
 bool isDeclBlockNode(tnode *t);
 bool isDeclNode(tnode *t);
 bool isArrayNode(tnode *t);
+bool isAccessNode(tnode *t);
+bool isRefNode(tnode *t);
 
 bool matchesOperator(tnode *t, char *op);
 bool isRelationalOperator(tnode *t);

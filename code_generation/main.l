@@ -37,7 +37,7 @@ LETTER [a-z]
     return NUM;
 }
 
-{LETTER}+ {
+{LETTER}+{DIGIT}* {
     yylval.node = createTree(0,NULL,TYPE_NULL,strdup(yytext),NODETYPE_LEAF,NULL,NULL,NULL,NULL);
     return ID;
 }
@@ -52,6 +52,7 @@ LETTER [a-z]
 "-" {return MINUS;}
 "*" {return MUL;}
 "/" {return DIV;}
+"%" {return MOD;}
 
 "<" {return LT;}
 "<=" {return LE;}
@@ -67,7 +68,6 @@ LETTER [a-z]
 "," {return ',';}
 "[" {return '[';}
 "]" {return ']';}
-
 "&" {return '&';}
 
 [ \t\n] {}
