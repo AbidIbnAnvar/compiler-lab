@@ -45,10 +45,11 @@
 %type <dim> Dimlist DimDecl
 %type <var_type> Type
 
+
+%nonassoc LE LT GT GE NE EQ
 %left PLUS MINUS
 %left MUL DIV MOD
 
-%nonassoc LE LT GT GE NE EQ
 %locations
 
 %%
