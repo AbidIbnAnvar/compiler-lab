@@ -1,9 +1,32 @@
 decl
-    int* p;
-    int a;
+    int result,factorial(int n);
+    int hello(int c, int d);
 enddecl
 
-read(a);
-p = &a;
-*p = (*p)*5;
-write(a);
+int factorial(int n){
+    decl
+        int f;
+    enddecl
+    if( n==1 || n==0 ) then
+        f = 1;
+    else
+        f = n * factorial(n-1);
+    endif;
+    return f;
+}
+
+int hello(int c, int d){
+    decl
+        int a,b;
+    enddecl
+    write("HELLO");
+    return 0;
+}
+
+int main(){
+    decl
+        int a;
+    enddecl
+    hello(1,2);
+    return 0;
+}

@@ -1,11 +1,25 @@
 #include "tree.h"
 #include "../helper/helper.h"
 
-tnode *createTree(int val, char *op, Type type, char *c, NodeType nodetype, tnode *l, tnode *m, tnode *r, Gsymbol *Gentry)
+tnode *createTree(int val, char *op, Type type, char *varname, NodeType nodetype, tnode *l, tnode *m, tnode *r, SymbolTable *STentry)
 {
-    if (nodetype == NODETYPE_OP_ARITHMETIC)
+    if (nodetype == NODETYPE_OP_ASSIGNMENT)
     {
-        if (strcmp(op, "+") == 0 && ((l->type != TYPE_INT && l->nodetype != NODETYPE_ACCESS) || (r->type != TYPE_INT && r->nodetype != NODETYPE_ACCESS)))
+        if (type == TYPE_PTR)
+        {
+            // if(r->nodetype!=NODETYPE_REF){
+            //     fprintf();
+            // }
+        }
+    }
+    else if (nodetype == NODETYPE_OP_ARITHMETIC)
+    {
+        if (l->type == TYPE_STR || r->type == TYPE_STR)
+        {
+            fprintf(stderr, "Error: Type Mismatch. Expected Integer\n");
+            exit(1);
+        }
+        else if (strcmp(op, "+") == 0 && ((l->type != TYPE_INT && l->nodetype != NODETYPE_ACCESS) || (r->type != TYPE_INT && r->nodetype != NODETYPE_ACCESS)))
         {
             fprintf(stderr, "Error: Type Mismatch. Expected Integer\n");
             exit(1);
@@ -33,12 +47,12 @@ tnode *createTree(int val, char *op, Type type, char *c, NodeType nodetype, tnod
     tree->val = val;
     tree->type = type;
     tree->op = op;
-    tree->varname = c;
+    tree->varname = varname;
     tree->nodetype = nodetype;
     tree->left = l;
     tree->right = r;
     tree->middle = m;
-    tree->Gentry = Gentry;
+    tree->STentry = STentry;
     return tree;
 }
 
@@ -57,7 +71,7 @@ void print_tree_structure(tnode *root, char *prefix, int is_last, int is_root)
     // Print node information
     printf("[%s] ", nodetype_to_string(root->nodetype));
     if (root->varname)
-        printf("var:%s ", root->varname);
+        printf("name:%s ", root->varname);
     if (root->op)
         printf("op:%s ", root->op);
     printf("type:%s ", type_to_string(root->type));

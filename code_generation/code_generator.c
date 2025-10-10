@@ -10,17 +10,17 @@ reg_index current_register = -1;
 int last_used_label = -1;
 int stack_top = 4095;
 
-reg_index getReg()
+reg_index get_register()
 {
     return ++current_register;
 }
 
-reg_index freeReg()
+reg_index free_register()
 {
     return --current_register;
 }
 
-int getLabel()
+int get_label()
 {
     return ++last_used_label;
 }
@@ -47,19 +47,18 @@ reg_index codegen(tnode *t, int startLabel, int endLabel)
             // Assignment to pointer
             else if (isAccessNode(leftNode))
             {
-                // TODO:
-                Gsymbol *g = Lookup(leftNode->left->varname);
-                int binding = g->binding;
+                SymbolTable *st = leftNode->left->STentry;
+                int binding = st->binding;
                 reg_index p = codegen_read_from_stack(binding);
                 codegen_store_in_stack_with_registers(r, p);
-                freeReg();
+                free_register();
                 return current_register;
             }
             // Assignment to variable
             else
             {
-                Gsymbol *g = Lookup(leftNode->varname);
-                int startOffset = g->binding;
+                SymbolTable *st = leftNode->STentry;
+                int startOffset = st->binding;
                 codegen_store_in_stack(r, startOffset);
                 return current_register;
             }
@@ -67,7 +66,7 @@ reg_index codegen(tnode *t, int startLabel, int endLabel)
         else if (isArithmeticNode(t) || isRelationalNode(t))
         {
             reg_index r = codegen_evaluate_expression(t);
-            freeReg();
+            free_register();
             return current_register;
         }
     }
@@ -82,9 +81,9 @@ reg_index codegen(tnode *t, int startLabel, int endLabel)
         else
         {
             // Get symbol table entry for the variable
-            Gsymbol *g = Lookup(t->left->varname);
+            SymbolTable *st = t->left->STentry;
             // Get starting offset of the variable
-            int startOffset = g->binding;
+            int startOffset = st->binding;
 
             codegen_read_to_address(startOffset);
         }
@@ -108,21 +107,21 @@ reg_index codegen(tnode *t, int startLabel, int endLabel)
         // variable is inside write()
         else if (isLeafNode(t->left) && t->left->varname != NULL)
         {
-            Gsymbol *g = Lookup(t->left->varname);
+            SymbolTable *st = t->left->STentry;
 
-            int offset = g->binding;
+            int offset = st->binding;
             r = codegen_read_from_stack(offset);
         }
         // number is put inside write
         else if (isLeafNode(t->left) && t->left->type == TYPE_INT)
         {
-            r = getReg();
+            r = get_register();
             codegen_set_int_value_to_register(r, t->left->val);
         }
         // string is put inside write
         else if (isLeafNode(t->left) && t->left->type == TYPE_STR)
         {
-            r = getReg();
+            r = get_register();
             codegen_set_str_value_to_register(r, t->left->strval);
         }
         codegen_print_register(r);
@@ -132,11 +131,11 @@ reg_index codegen(tnode *t, int startLabel, int endLabel)
     {
         if (t->right != NULL)
         {
-            int elseLabel = getLabel();
-            int finishLabel = getLabel();
+            int elseLabel = get_label();
+            int finishLabel = get_label();
             reg_index r = codegen_evaluate_expression(t->left);
             codegen_jump_to_label_if_zero(r, elseLabel);
-            freeReg();
+            free_register();
             codegen(t->middle, startLabel, endLabel);
             codegen_jump_to_label(finishLabel);
             codegen_label_definition(elseLabel);
@@ -145,7 +144,7 @@ reg_index codegen(tnode *t, int startLabel, int endLabel)
         }
         else
         {
-            int finishLabel = getLabel();
+            int finishLabel = get_label();
             reg_index r = codegen_evaluate_expression(t->left);
             codegen_jump_to_label_if_zero(r, finishLabel);
             codegen(t->middle, startLabel, endLabel);
@@ -155,8 +154,8 @@ reg_index codegen(tnode *t, int startLabel, int endLabel)
     }
     else if (isWhileNode(t))
     {
-        int start_label = getLabel();
-        int end_label = getLabel();
+        int start_label = get_label();
+        int end_label = get_label();
         codegen_label_definition(start_label);
         reg_index r = codegen_evaluate_expression(t->left);
         codegen_jump_to_label_if_zero(r, end_label);
@@ -177,8 +176,8 @@ reg_index codegen(tnode *t, int startLabel, int endLabel)
     }
     else if (isDoWhileNode(t))
     {
-        int start_label = getLabel();
-        int end_label = getLabel();
+        int start_label = get_label();
+        int end_label = get_label();
         codegen_label_definition(start_label);
         codegen(t->right, start_label, end_label);
         reg_index r = codegen_evaluate_expression(t->left);
@@ -188,8 +187,8 @@ reg_index codegen(tnode *t, int startLabel, int endLabel)
     }
     else if (isRepeatUntilNode(t))
     {
-        int start_label = getLabel();
-        int end_label = getLabel();
+        int start_label = get_label();
+        int end_label = get_label();
         codegen_label_definition(start_label);
         codegen(t->right, start_label, end_label);
         reg_index r = codegen_evaluate_expression(t->left);
@@ -218,18 +217,16 @@ reg_index codegen_evaluate_expression(tnode *t)
     }
     else if (isRefNode(t))
     {
-        // TODO:
-        Gsymbol *g = Lookup(t->left->varname);
-        int binding = g->binding;
-        reg_index r = getReg();
+        SymbolTable *st = t->left->STentry;
+        int binding = st->binding;
+        reg_index r = get_register();
         codegen_set_int_value_to_register(r, binding);
         return r;
     }
     else if (isAccessNode(t))
     {
-        // TODO:
-        Gsymbol *g = Lookup(t->left->varname);
-        int binding = g->binding;
+        SymbolTable *st = t->left->STentry;
+        int binding = st->binding;
         reg_index p = codegen_read_from_stack(binding); // contains values' address
         codegen_read_from_stack_with_register(p);
         return p;
@@ -237,7 +234,7 @@ reg_index codegen_evaluate_expression(tnode *t)
     // If the node is leaf node, then it is either a variable or a number or a string
     else if (isLeafNode(t))
     {
-        reg_index r = getReg();
+        reg_index r = get_register();
         // if the node is a number or string
         if (t->varname == NULL)
         {
@@ -259,8 +256,8 @@ reg_index codegen_evaluate_expression(tnode *t)
         // If the node is a variable
         else
         {
-            Gsymbol *g = Lookup(t->varname);
-            int offset = g->binding;
+            SymbolTable *st = t->STentry;
+            int offset = st->binding;
             fprintf(target_file, "MOV R%d,[%d]\n", r, offset);
         }
         return current_register;
@@ -274,14 +271,15 @@ reg_index codegen_evaluate_expression(tnode *t)
 // Returns register containing address
 reg_index codegen_array(tnode *t)
 {
-    Gsymbol *g = Lookup(t->varname);
-    reg_index r = codegen_get_array_offset(g->dimNode, t->dimNode);
-    reg_index binding = getReg();
-    codegen_set_int_value_to_register(binding, g->binding);
+    SymbolTable *st = t->STentry;
+    reg_index r = codegen_get_array_offset(st->dimNode, t->dimNode);
+    reg_index binding = get_register();
+    codegen_set_int_value_to_register(binding, st->binding);
     codegen_add_two_registers(r, binding);
     return r;
 }
 
+// Returns register containing offset
 reg_index codegen_get_array_offset(dimNode *decl, dimNode *node)
 {
     if (decl == NULL)
@@ -316,7 +314,7 @@ reg_index codegen_get_array_offset(dimNode *decl, dimNode *node)
     }
 
     reg_index valReg = codegen_evaluate_expression(node->tnode);
-    reg_index productReg = getReg();
+    reg_index productReg = get_register();
     codegen_set_int_value_to_register(productReg, product);
     codegen_multiply_two_registers(valReg, productReg);
     codegen_add_two_registers(offsetReg, valReg);
@@ -369,95 +367,122 @@ reg_index codegen_operation(tnode *t, reg_index left_expression, reg_index right
     {
         codegen_equal_two_registers(left_expression, right_expression);
     }
+    else if (matchesOperator(t, "||"))
+    {
+        codegen_or_two_registers(left_expression, right_expression);
+    }
+    else if (matchesOperator(t, "&&"))
+    {
+        codegen_and_two_registers(left_expression, right_expression);
+    }
+
     return current_register;
 }
 
 reg_index codegen_add_two_registers(reg_index r1, reg_index r2)
 {
     fprintf(target_file, "ADD R%d,R%d\n", r1, r2);
-    freeReg();
-    return current_register;
+    free_register();
+    return r1;
 }
 
 reg_index codegen_add_two_numbers(int num1, int num2)
 {
-    reg_index r1 = getReg();
+    reg_index r1 = get_register();
     fprintf(target_file, "MOV R%d,%d\n", r1, num1);
-    reg_index r2 = getReg();
+    reg_index r2 = get_register();
     fprintf(target_file, "MOV R%d,%d\n", r2, num2);
     fprintf(target_file, "ADD R%d,R%d\n", r1, r2);
-    freeReg();
-    return current_register;
+    free_register();
+    return r1;
 }
 
 reg_index codegen_subtract_two_registers(reg_index r1, reg_index r2)
 {
     fprintf(target_file, "SUB R%d,R%d\n", r1, r2);
-    freeReg();
-    return current_register;
+    free_register();
+    return r1;
 }
 
 reg_index codegen_multiply_two_registers(reg_index r1, reg_index r2)
 {
     fprintf(target_file, "MUL R%d,R%d\n", r1, r2);
-    freeReg();
-    return current_register;
+    free_register();
+    return r1;
 }
 
 reg_index codegen_divide_two_registers(reg_index r1, reg_index r2)
 {
     fprintf(target_file, "DIV R%d,R%d\n", r1, r2);
-    freeReg();
-    return current_register;
+    free_register();
+    return r1;
 }
 
 reg_index codegen_mod_two_registers(reg_index r1, reg_index r2)
 {
     fprintf(target_file, "MOD R%d,R%d\n", r1, r2);
-    freeReg();
-    return current_register;
+    free_register();
+    return r1;
 }
 
 reg_index codegen_less_than_two_registers(reg_index left_expression, reg_index right_expression)
 {
     fprintf(target_file, "LT R%d,R%d\n", left_expression, right_expression);
-    freeReg();
-    return current_register;
+    free_register();
+    return left_expression;
 }
 
 reg_index codegen_less_than_equal_two_registers(reg_index left_expression, reg_index right_expression)
 {
     fprintf(target_file, "LE R%d,R%d\n", left_expression, right_expression);
-    freeReg();
-    return current_register;
+    free_register();
+    return left_expression;
 }
 
 reg_index codegen_greater_than_two_registers(reg_index left_expression, reg_index right_expression)
 {
     fprintf(target_file, "GT R%d,R%d\n", left_expression, right_expression);
-    freeReg();
-    return current_register;
+    free_register();
+    return left_expression;
 }
 
 reg_index codegen_greater_than_equal_two_registers(reg_index left_expression, reg_index right_expression)
 {
     fprintf(target_file, "GE R%d,R%d\n", left_expression, right_expression);
-    freeReg();
-    return current_register;
+    free_register();
+    return left_expression;
 }
 
 reg_index codegen_not_equal_two_registers(reg_index left_expression, reg_index right_expression)
 {
     fprintf(target_file, "NE R%d,R%d\n", left_expression, right_expression);
-    freeReg();
-    return current_register;
+    free_register();
+    return left_expression;
 }
 
 reg_index codegen_equal_two_registers(reg_index left_expression, reg_index right_expression)
 {
     fprintf(target_file, "EQ R%d,R%d\n", left_expression, right_expression);
-    freeReg();
-    return current_register;
+    free_register();
+    return left_expression;
+}
+
+reg_index codegen_or_two_registers(reg_index left_expression, reg_index right_expression)
+{
+    fprintf(target_file, "NE R%d,0\n", left_expression);
+    fprintf(target_file, "NE R%d,0\n", right_expression);
+    fprintf(target_file, "ADD R%d,R%d\n", left_expression, right_expression);
+    free_register();
+    return left_expression;
+}
+
+reg_index codegen_and_two_registers(reg_index left_expression, reg_index right_expression)
+{
+    fprintf(target_file, "NE R%d,0\n", left_expression);
+    fprintf(target_file, "NE R%d,0\n", right_expression);
+    fprintf(target_file, "MUL R%d,R%d\n", left_expression, right_expression);
+    free_register();
+    return left_expression;
 }
 
 void codegen_jump_to_label(int label)
@@ -508,7 +533,7 @@ void codegen_initialize_stack(int addr)
 void codegen_store_in_stack(reg_index reg, int addr)
 {
     fprintf(target_file, "MOV [%d],R%d\n", addr, reg);
-    freeReg();
+    free_register();
 }
 
 void codegen_store_in_stack_with_registers(reg_index src, reg_index dest)
@@ -518,7 +543,7 @@ void codegen_store_in_stack_with_registers(reg_index src, reg_index dest)
 
 reg_index codegen_read_from_stack(int addr)
 {
-    reg_index r = getReg();
+    reg_index r = get_register();
     fprintf(target_file, "MOV R%d,[%d]\n", r, addr);
     return r;
 }
@@ -533,9 +558,9 @@ void codegen_print_address(int addr)
 {
     while (current_register != -1)
     {
-        freeReg();
+        free_register();
     }
-    getReg();
+    get_register();
     fprintf(target_file, "MOV R%d,\"Write\"\n", current_register);
     fprintf(target_file, "PUSH R%d\n", current_register);
     fprintf(target_file, "MOV R%d,-2\n", current_register);
@@ -559,9 +584,9 @@ void codegen_print_register(reg_index reg)
     int reg_address = stack_top;
     while (current_register != -1)
     {
-        freeReg();
+        free_register();
     }
-    getReg();
+    get_register();
     fprintf(target_file, "MOV R%d,\"Write\"\n", current_register);
     fprintf(target_file, "PUSH R%d\n", current_register);
     fprintf(target_file, "MOV R%d,-2\n", current_register);
@@ -585,9 +610,9 @@ void codegen_read_to_address(int addr)
     int push_count = 0;
     while (current_register != -1)
     {
-        freeReg();
+        free_register();
     }
-    getReg();
+    get_register();
     fprintf(target_file, "MOV R%d,\"Read\"\n", current_register);
     fprintf(target_file, "PUSH R%d\n", current_register);
     fprintf(target_file, "MOV R%d,-1\n", current_register);
@@ -602,12 +627,12 @@ void codegen_read_to_address(int addr)
     fprintf(target_file, "POP R%d\n", current_register);
     fprintf(target_file, "POP R%d\n", current_register);
     fprintf(target_file, "POP R%d\n", current_register);
-    freeReg();
+    free_register();
 }
 
 void codegen_read_to_register(reg_index reg)
 {
-    getReg();
+    get_register();
     fprintf(target_file, "MOV R%d,\"Read\"\n", current_register);
     fprintf(target_file, "PUSH R%d\n", current_register);
     fprintf(target_file, "MOV R%d,-1\n", current_register);
@@ -624,7 +649,7 @@ void codegen_read_to_register(reg_index reg)
     fprintf(target_file, "POP R%d\n", current_register);
     while (current_register != -1)
     {
-        freeReg();
+        free_register();
     }
 }
 

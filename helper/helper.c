@@ -160,6 +160,8 @@ const char *type_to_string(Type type)
         return "INT";
     case TYPE_STR:
         return "STRING";
+    case TYPE_PTR:
+        return "PTR";
     default:
         return "UNKNOWN";
     }
@@ -207,6 +209,12 @@ const char *nodetype_to_string(NodeType nodetype)
         return "REF";
     case NODETYPE_ACCESS:
         return "ACCESS";
+    case NODETYPE_MAIN:
+        return "MAIN";
+    case NODETYPE_FUNC:
+        return "FUNC";
+    case NODETYPE_RETURN:
+        return "RET";
     default:
         return "UNKNOWN";
     }

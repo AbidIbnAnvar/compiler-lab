@@ -72,14 +72,18 @@ extern int yydebug;
     GE = 278,
     NE = 279,
     EQ = 280,
-    BREAK = 281,
-    CONTINUE = 282,
-    REPEAT = 283,
-    UNTIL = 284,
-    DECL = 285,
-    ENDDECL = 286,
-    INT_TYPE = 287,
-    STR_TYPE = 288
+    OR = 281,
+    AND = 282,
+    BREAK = 283,
+    CONTINUE = 284,
+    REPEAT = 285,
+    UNTIL = 286,
+    DECL = 287,
+    ENDDECL = 288,
+    INT_TYPE = 289,
+    STR_TYPE = 290,
+    MAIN = 291,
+    RETURN = 292
   };
 #endif
 /* Tokens.  */
@@ -106,27 +110,32 @@ extern int yydebug;
 #define GE 278
 #define NE 279
 #define EQ 280
-#define BREAK 281
-#define CONTINUE 282
-#define REPEAT 283
-#define UNTIL 284
-#define DECL 285
-#define ENDDECL 286
-#define INT_TYPE 287
-#define STR_TYPE 288
+#define OR 281
+#define AND 282
+#define BREAK 283
+#define CONTINUE 284
+#define REPEAT 285
+#define UNTIL 286
+#define DECL 287
+#define ENDDECL 288
+#define INT_TYPE 289
+#define STR_TYPE 290
+#define MAIN 291
+#define RETURN 292
 
 /* Value type.  */
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
 union YYSTYPE
 {
-#line 21 "main.y"
+#line 19 "main.y"
 
     struct tnode* node;
-    struct Gsymbol* gsymbol;
+    struct SymbolTable* symbolTable;
     int var_type;
     struct dimNode* dim;
+    struct paramList* params;
 
-#line 130 "y.tab.h"
+#line 139 "y.tab.h"
 
 };
 typedef union YYSTYPE YYSTYPE;

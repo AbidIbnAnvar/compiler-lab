@@ -13,7 +13,7 @@ LETTER [a-z]
 
 %%
 
-
+"main" {return MAIN;}
 "read" {return READ;}
 "write" {return WRITE;}
 "if" {return IF;}
@@ -31,6 +31,22 @@ LETTER [a-z]
 "enddecl" {return ENDDECL;}
 "int" {return INT_TYPE;}
 "str" {return STR_TYPE;}
+"return" {return RETURN;}
+
+"+" {return PLUS;}
+"-" {return MINUS;}
+"*" {return MUL;}
+"/" {return DIV;}
+"%" {return MOD;}
+
+"<" {return LT;}
+"<=" {return LE;}
+">" {return GT;}
+">=" {return GE;}
+"!=" {return NE;}
+"==" {return EQ;}
+"||" {return OR;}
+"&&" {return AND;}
 
 {DIGIT}+ {
     yylval.node = createTree(atoi(yytext),"",TYPE_INT,NULL,NODETYPE_LEAF,NULL,NULL,NULL,NULL);
@@ -48,19 +64,6 @@ LETTER [a-z]
     return STR;
 }
 
-"+" {return PLUS;}
-"-" {return MINUS;}
-"*" {return MUL;}
-"/" {return DIV;}
-"%" {return MOD;}
-
-"<" {return LT;}
-"<=" {return LE;}
-">" {return GT;}
-">=" {return GE;}
-"!=" {return NE;}
-"==" {return EQ;}
-
 "(" {return '(';}
 ")" {return ')';}
 ";" {return ';';}
@@ -70,8 +73,12 @@ LETTER [a-z]
 "]" {return ']';}
 "&" {return '&';}
 
-[ \t\n] {}
-. {}
+
+"{" {return '{';}
+"}" {return '}';}
+
+[ \t]+
+\n          { yylloc.last_line++; yylloc.first_line++; }
 
 %%
 

@@ -12,13 +12,13 @@ reg_index current_register;
 FILE *target_file;
 
 reg_index codegen(tnode *t, int startLabel, int endLabel);
-reg_index getReg();
-reg_index freeReg();
+reg_index get_register();
+reg_index free_register();
 
 int last_used_label;
 int stack_top;
 
-int getLabel();
+int get_label();
 
 reg_index codegen_evaluate_expression(tnode *t);
 reg_index codegen_operation(tnode *t, reg_index left_expression, reg_index right_expression);
@@ -34,6 +34,8 @@ reg_index codegen_greater_than_two_registers(reg_index left_expression, reg_inde
 reg_index codegen_greater_than_equal_two_registers(reg_index left_expression, reg_index right_expression);
 reg_index codegen_not_equal_two_registers(reg_index left_expression, reg_index right_expression);
 reg_index codegen_equal_two_registers(reg_index left_expression, reg_index right_expression);
+reg_index codegen_or_two_registers(reg_index left_expression, reg_index right_expression);
+reg_index codegen_and_two_registers(reg_index left_expression, reg_index right_expression);
 void codegen_jump_to_label(int label);
 void codegen_jump_to_label_if_zero(reg_index r, int label);
 void codegen_jump_to_label_if_not_zero(reg_index r, int label);

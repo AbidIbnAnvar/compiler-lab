@@ -14,15 +14,14 @@
     void yyerror(char* s);
     struct tnode* head = NULL;
     FILE* yyin;
-    Gsymbol *tableHead = NULL;
-    // extern YYLTYPE yylloc;
 %}
 
 %union{
     struct tnode* node;
-    struct Gsymbol* gsymbol;
+    struct SymbolTable* symbolTable;
     int var_type;
     struct dimNode* dim;
+    struct paramList* params;
 }
 
 
@@ -31,21 +30,28 @@
 %token READ WRITE
 %token IF THEN ELSE ENDIF
 %token WHILE DO ENDWHILE
-%token LT LE GT GE NE EQ
+%token LT LE GT GE NE EQ OR AND
 %token BREAK CONTINUE
 %token REPEAT UNTIL
 %token DECL ENDDECL
 %token INT_TYPE STR_TYPE
+%token MAIN
+%token RETURN
 
-%type <node> expr Slist InputStmt Stmt OutputStmt AsgStmt 
+%type <node> expr Slist InputStmt Stmt OutputStmt AsgStmt FunctionCallStmt ReturnStmt
 %type <node> IfStmt WhileStmt 
 %type <node> BreakStmt ContinueStmt
 %type <node> DoWhileStmt RepeatUntilStmt
-%type <gsymbol> DeclList Decl VarList
+%type <node> FDefBlock MainBlock FDef
+%type <symbolTable> VarList
+%type <symbolTable> GDeclList GDecl GidList Gid LDecList LDecl
 %type <dim> Dimlist DimDecl
 %type <var_type> Type
+%type <node> ArgList
+%type <params> ParamList Param
 
-
+%left OR
+%left AND
 %nonassoc LE LT GT GE NE EQ
 %left PLUS MINUS
 %left MUL DIV MOD
@@ -54,48 +60,135 @@
 
 %%
 
-Program : Declarations Slist {
+ Program : GDeclBlock FDefBlock MainBlock{
+            head = createTree(0,NULL,TYPE_NULL,NULL,NODETYPE_CONNECTOR,$2,NULL,$3,NULL);
+            printTree(head);
+        }
+        | GDeclBlock MainBlock{
             head = $2;
             printTree(head);
         }
+        | MainBlock{
+            head = $1;
+            printTree(head);
+        }
         ;
-
-Declarations :  DECL DeclList ENDDECL {
-                tableHead = $2;
-                ShowTable(tableHead);
+GDeclBlock: DECL GDeclList ENDDECL {
+                pushToScopeStack($2,&sstop);
+                showTable($2);
             }
-            | DECL ENDDECL {
-                tableHead = NULL;
-            }
-            ;
+            | DECL ENDDECL{
+                pushToScopeStack(NULL,&sstop);
+                showTable(sstop->symbolTable);
+            };
 
-DeclList : DeclList Decl {
-            Gsymbol* curr = $1;
-            while(curr!=NULL && curr->next!=NULL){
+GDeclList: GDeclList GDecl {
+            SymbolTable* curr = $1;
+            while(curr && curr->next){
                 curr = curr->next;
             }
             curr->next = $2;
             $$ = $1;
+        } 
+        | GDecl {
+            $$ = $1;
+        };
+
+GDecl: Type GidList ';'{
+        SymbolTable* curr = $2;
+        while(curr){
+            // set type to all except ptr variables
+            if(!curr->type || curr->type!=TYPE_PTR){
+                curr->type = $1;
+            }else if(curr->type && curr->type==TYPE_PTR){
+                curr->vartype = $1;
+            }
+            curr = curr->next;
         }
-        | Decl {
+        $$ = $2;
+    };  
+
+GidList: GidList ',' Gid {
+            SymbolTable* curr = $1;
+            while(curr!=NULL&&curr->next!=NULL){
+                curr = curr->next;
+            }
+            // Append id to the end of the symbol table
+            curr->next = $3;
+            $$ = $1;
+        }
+        | Gid {
             $$ = $1;
         }
         ;
 
-Decl : Type VarList ';' {
-            Gsymbol* curr = $2;
-            while(curr!=NULL){
-                // set type to all except ptr variables
-                if(!curr->type || curr->type!=TYPE_PTR){
-                    curr->type = $1;
-                }else if(curr->type && curr->type!=TYPE_PTR){
-                    curr->vartype = $1;
-                }
+Gid: ID {
+        $$ = createEntry($1->varname,$1->type,1,NULL,NULL,NULL);
+    }
+    | ID DimDecl {
+        int size = getArraySize($2);
+        $$ = createEntry($1->varname,$1->type,size,$2,NULL,NULL);
+    }
+    | MUL ID {
+        $$ = createEntry($2->varname,TYPE_PTR,1,NULL,NULL,NULL);
+    }
+    | ID '('ParamList')' {
+        $$ = createEntry($1->varname,$1->type,1,NULL,$3,NULL);
+        $$->flabel = currentFLabel++;
+    }
+    ;
+
+MainBlock: INT_TYPE MAIN '(' ')' {
+            nextBinding = 1;
+            printf("main()\n");
+            pushToScopeStack(NULL,&sstop);
+        } '{' LDeclBlock Slist ReturnStmt '}' {
+            $$ = createTree(0,NULL,TYPE_INT,"main",NODETYPE_MAIN,NULL,NULL,$8,NULL);
+            popFromScopeStack(&sstop);
+        } 
+        ;
+
+FDefBlock: FDefBlock FDef {
+            // TODO: Check if the declared function and defined function types and parameters are same
+            $$ = createTree(0,NULL,TYPE_NULL,NULL,NODETYPE_CONNECTOR,$1,NULL,$2,NULL);
+        }
+        | FDef {
+            // TODO: Check if the declared function and defined function types and parameters are same
+            $$ = $1;
+        } 
+        ;
+
+FDef: Type ID '(' ParamList ')' {
+            nextBinding = 1;
+            printf("%s()\n",$2->varname);
+            SymbolTable* params = convertParamListToSymbolTable($4);
+            pushToScopeStack(params,&sstop);
+    }
+     '{' LDeclBlock Slist ReturnStmt '}' {
+        $$ = createTree(0,NULL,TYPE_NULL,$2->varname,NODETYPE_FUNC,NULL,$9,$10,NULL);
+        popFromScopeStack(&sstop);
+    };
+
+ParamList: ParamList ',' Param {
+            paramList* curr = $1;
+            while(curr->next){
                 curr = curr->next;
-            }
-            $$ = $2;
+            }   
+            curr->next = $3;
+            $$ = $1;
+        } 
+        | Param {
+            $$ = $1;
+        } 
+        | { 
+            $$ = NULL;
         }
         ;
+
+Param: Type ID {
+        $$ = createParamList($1,$2->varname);
+    }
+    ;
 
 Type : INT_TYPE {
         $$ = TYPE_INT;
@@ -105,43 +198,88 @@ Type : INT_TYPE {
     }
     ;
 
+LDeclBlock: DECL LDecList ENDDECL {
+            if(!sstop->symbolTable){
+                sstop->symbolTable = $2;
+            }else{
+                SymbolTable* curr = sstop->symbolTable;
+                while(curr->next){
+                    curr = curr->next;
+                }
+                curr->next = $2;
+            }
+            showTable(sstop->symbolTable);
+        } 
+        | DECL ENDDECL {
+            showTable(sstop->symbolTable);
+        }
+        ;
+
+LDecList: LDecList LDecl {
+            SymbolTable* curr = $1;
+            while(curr && curr->next){
+                curr = curr->next;
+            }
+            curr->next = $2;
+            $$ = $1;
+        }
+        | LDecl {
+            $$ = $1;
+        }
+        ;
+
+LDecl: Type VarList ';' {
+        SymbolTable* curr = $2;
+        while(curr){
+            // set type to all except ptr variables
+            if(!curr->type || curr->type!=TYPE_PTR){
+                curr->type = $1;
+            }else if(curr->type && curr->type==TYPE_PTR){
+                curr->vartype = $1;
+            }
+            curr = curr->next;
+        }
+        $$ = $2;    
+    }
+    ;
+
 VarList : VarList ',' ID {
             // Get symbol table pointer for varlist
-            Gsymbol* curr = $1;
-            while(curr!=NULL&&curr->next!=NULL){
+            SymbolTable* curr = $1;
+            while(curr->next){
                 curr = curr->next;
             }
             // Append entry to the end of the symbol table
-            curr->next = createEntry($3->varname,$3->type,1,NULL,NULL);
+            curr->next = createEntry($3->varname,$3->type,1,NULL,NULL,NULL);
             $$ = $1;
         } 
         | ID {
-            $$ = createEntry($1->varname,$1->type,1,NULL,NULL);
+            $$ = createEntry($1->varname,$1->type,1,NULL,NULL,NULL);
         } 
         | VarList ',' ID DimDecl {
-            Gsymbol* curr = $1;
-            while(curr!=NULL&&curr->next!=NULL){
+            SymbolTable* curr = $1;
+            while(curr->next){
                 curr = curr->next;
             }
 
             int size = getArraySize($4);
-            curr->next = createEntry($3->varname,$3->type,size,$4,NULL);
+            curr->next = createEntry($3->varname,$3->type,size,$4,NULL,NULL);
             $$ = $1;
         }
         | ID DimDecl {
             int size = getArraySize($2);
-            $$ = createEntry($1->varname,$1->type,size,$2,NULL);
+            $$ = createEntry($1->varname,$1->type,size,$2,NULL,NULL);
         }
         | VarList ',' MUL ID {
-            Gsymbol* curr = $1;
-            while(curr!=NULL&&curr->next!=NULL){
+            SymbolTable* curr = $1;
+            while(curr->next){
                 curr = curr->next;
             }
-            curr->next = createEntry($4->varname,TYPE_PTR,1,NULL,NULL);
+            curr->next = createEntry($4->varname,TYPE_PTR,1,NULL,NULL,NULL);
             $$ = $1;
         }
         | MUL ID {
-            $$ = createEntry($2->varname,TYPE_PTR,1,NULL,NULL);
+            $$ = createEntry($2->varname,TYPE_PTR,1,NULL,NULL,NULL);
         }
         ;
 
@@ -178,14 +316,18 @@ Stmt : InputStmt {
         | RepeatUntilStmt {
             $$ = $1;
         }
+        | FunctionCallStmt {
+            $$ = $1;
+        }
         ;
 
 InputStmt : READ '(' ID ')' ';' {
-           $$ = createTree(0,NULL,TYPE_NULL,NULL,NODETYPE_READ,$3,NULL,NULL,NULL); 
+            $3->STentry = lookupEntry($3->varname,sstop);
+            $$ = createTree(0,NULL,TYPE_NULL,NULL,NODETYPE_READ,$3,NULL,NULL,NULL); 
         }
         | READ '(' ID Dimlist ')' ';'{
             // Fetch record containing the varname in the symbol table
-            Gsymbol* g = Lookup($3->varname);
+            $3->STentry = lookupEntry($3->varname,sstop);
             $3->nodetype = NODETYPE_ARRAY;
             $3->dimNode = $4;
             $$ = createTree(0,NULL,TYPE_NULL,NULL,NODETYPE_READ,$3,NULL,NULL,NULL); 
@@ -198,17 +340,23 @@ OutputStmt : WRITE '(' expr ')' ';' {
         ;
 
 AsgStmt : ID '=' expr ';' {
-            $$ = createTree(0,"=",TYPE_NULL,NULL,NODETYPE_OP_ASSIGNMENT,$1,NULL,$3,NULL);
+            SymbolTable* st = lookupEntry($1->varname,sstop);
+            $1->STentry = st;
+            $$ = createTree(0,"=",st->type,NULL,NODETYPE_OP_ASSIGNMENT,$1,NULL,$3,NULL);
         }
         | ID Dimlist '=' expr ';' {
-            Gsymbol* g = Lookup($1->varname);
+            SymbolTable* st = lookupEntry($1->varname,sstop);
+            $1->STentry = st;
+            $1->type = st->type;
             $1->nodetype = NODETYPE_ARRAY;
             $1->dimNode = $2;
             $$ = createTree(0,"=",TYPE_NULL,NULL,NODETYPE_OP_ASSIGNMENT,$1,NULL,$4,NULL);
         }
         | MUL ID '=' expr ';' {
-            tnode* left = createTree(0,"*",TYPE_NULL,NULL,NODETYPE_ACCESS,$2,NULL,NULL,NULL);
-            $$ = createTree(0,"=",TYPE_NULL,NULL,NODETYPE_OP_ASSIGNMENT,left,NULL,$4,NULL);
+            SymbolTable* st = lookupEntry($2->varname,sstop);
+            $2->STentry = st;
+            tnode* left = createTree(0,"*",st->type,NULL,NODETYPE_ACCESS,$2,NULL,NULL,NULL);
+            $$ = createTree(0,"=",st->type,NULL,NODETYPE_OP_ASSIGNMENT,left,NULL,$4,NULL);
         }
         ;
 
@@ -241,6 +389,15 @@ DoWhileStmt : DO Slist WHILE expr ';' {
 RepeatUntilStmt : REPEAT Slist UNTIL expr ';' {
                     $$ = createTree(0,NULL,TYPE_NULL,NULL,NODETYPE_REPEAT_UNTIL,$4,NULL,$2,NULL);
                 };
+FunctionCallStmt: ID '(' ArgList ')' ';' {
+                    $1->STentry = lookupEntry($1->varname,sstop);
+                    $$ = createTree(0,NULL,TYPE_NULL,$1->varname,NODETYPE_FUNC,NULL,NULL,$3,NULL);
+                }
+                ;
+ReturnStmt: RETURN expr ';' {
+            $$ = createTree(0,NULL,TYPE_NULL,NULL,NODETYPE_RETURN,NULL,NULL,$2,NULL);
+        }
+        ;
 DimDecl: '[' NUM ']' DimDecl {
                 $$ = addDimension($2->val,$2,$4);
             }
@@ -264,14 +421,16 @@ Dimlist : '[' expr ']' Dimlist {
             $$ = addDimension($2->val,$2,NULL);
         }
         ;
-
+ArgList: ArgList ',' expr {
+            $$ = createTree(0,NULL,TYPE_NULL,NULL,NODETYPE_CONNECTOR,$1,NULL,$3,NULL);
+        }
+        | expr {
+            $$ = $1;
+        }
+        ;
 expr:
     expr PLUS expr {
-        int type = TYPE_INT;
-        if($1->type==TYPE_STR||$3->type==TYPE_STR){
-            type = TYPE_STR;
-        }
-        $$ = createTree(0,"+",type,NULL,NODETYPE_OP_ARITHMETIC,$1,NULL,$3,NULL);
+        $$ = createTree(0,"+",TYPE_INT,NULL,NODETYPE_OP_ARITHMETIC,$1,NULL,$3,NULL);
     }
     | expr MINUS expr {
         $$ = createTree(0,"-",TYPE_INT,NULL,NODETYPE_OP_ARITHMETIC,$1,NULL,$3,NULL);
@@ -303,30 +462,56 @@ expr:
     | expr EQ expr {
         $$ = createTree(0,"==",TYPE_INT,NULL,NODETYPE_OP_RELATIONAL,$1,NULL,$3,NULL);
     }
+    | expr OR expr {
+        $$ = createTree(0,"||",TYPE_INT,NULL,NODETYPE_OP_RELATIONAL,$1,NULL,$3,NULL);
+    }
+    | expr AND expr {
+        $$ = createTree(0,"&&",TYPE_INT,NULL,NODETYPE_OP_RELATIONAL,$1,NULL,$3,NULL);
+    }
     | '(' expr ')' {
         $$ = $2;
     }
     | ID Dimlist {
-        Gsymbol* g = Lookup($1->varname);
-        $1->type = g->type;
+        SymbolTable* st = lookupEntry($1->varname,sstop);
+        $1->STentry = st;
+        $1->type = st->type;
         $1->nodetype = NODETYPE_ARRAY;
         $1->dimNode = $2;
         $$ = $1;
     }
     | MUL ID {
-        Gsymbol* g = Lookup($2->varname);
-        if(g->type!=TYPE_PTR){
-            fprintf(stderr,"Trying to access non pointer values\n");
+        SymbolTable* st = lookupEntry($2->varname,sstop);
+        if(st->type!=TYPE_PTR){
+            fprintf(stderr,"Error: Trying to access non pointer values\n");
             exit(1);
         }
-        $$ = createTree(0,"*",TYPE_NULL,NULL,NODETYPE_ACCESS,$2,NULL,NULL,NULL);
+        $2->STentry = st;
+        $$ = createTree(0,"*",st->vartype,NULL,NODETYPE_ACCESS,$2,NULL,NULL,NULL);
     }
     | '&' ID {
-        $$ = createTree(0,"&",TYPE_NULL,NULL,NODETYPE_REF,$2,NULL,NULL,NULL);
+        SymbolTable* st = lookupEntry($2->varname,sstop);
+        if(st->type==TYPE_PTR){
+            fprintf(stderr,"Error: Trying to reference a pointer\n");
+            exit(1);
+        }
+        $2->STentry = st;
+        $2->type = st->type;
+        $$ = createTree(0,"&",st->type,NULL,NODETYPE_REF,$2,NULL,NULL,NULL);
+    }
+    | ID '('')' {
+        SymbolTable* st = lookupEntry($1->varname,sstop);
+        $1->STentry = st;
+        $$ = createTree(0,NULL,st->type,NULL,NODETYPE_FUNC_CALL,$1,NULL,NULL,NULL);
+    }
+    | ID '('ArgList')'{
+        SymbolTable* st = lookupEntry($1->varname,sstop);
+        $1->STentry = st;
+        $$ = createTree(0,NULL,st->type,NULL,NODETYPE_FUNC_CALL,$1,NULL,$3,NULL);
     }
     | ID {
-        Gsymbol* g = Lookup($1->varname);
-        $1->type = g->type;
+        SymbolTable* st = lookupEntry($1->varname,sstop);
+        $1->STentry = st;
+        $1->type = st->type;
         $$ = $1;
     }
     | NUM {
@@ -359,7 +544,6 @@ void code_generate(){
 
 void free_memory(){
     freeTree(head);
-    FreeGsymbolList(tableHead);
 }
 
 int main(){
@@ -367,6 +551,6 @@ int main(){
     yyparse();
     target_file = fopen("../target_file.xsm","w");
     code_generate();
-    free_memory();
+    /* free_memory(); */
     return 0;
 }
