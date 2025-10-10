@@ -1,5 +1,6 @@
 #include "table.h"
 #include "../helper/constant.h"
+#include "../tree/tree.h"
 
 scopeStack *sstop = NULL;
 int nextBinding = 4096;
@@ -102,20 +103,42 @@ void appendEntry(SymbolTable *entry)
     }
 }
 
-int checkparams(tnode *args, paramList *params)
+void checkparams(paramList *decl, paramList *def, char *fname)
+{
+    while (decl && def)
+    {
+        if (decl->type != def->type)
+        {
+            fprintf(stderr, "Error: Invalid Parameter for %s()\n", fname);
+            exit(1);
+        }
+        decl = decl->next;
+        def = def->next;
+    }
+    if ((!decl && def) || (decl && !def))
+    {
+        fprintf(stderr, "Error: Invalid Parameter for %s()\n", fname);
+        exit(1);
+    }
+}
+
+void checkargs(argList *args, paramList *params, char *fname)
 {
     while (args && params)
     {
-        int argType = args->type;
-        int paramType = params->type;
-        args = args->right;
+        if (args->node->type != params->type)
+        {
+            fprintf(stderr, "Error: Invalid Argument for %s()\n", fname);
+            exit(1);
+        }
+        args = args->next;
         params = params->next;
     }
     if ((args && !params) || (!args && params))
     {
-        return 0;
+        fprintf(stderr, "Error: Invalid Argument for %s()\n", fname);
+        exit(1);
     }
-    return 1;
 }
 
 // void appendEntryToGlobal(SymbolTable *entry)
@@ -167,6 +190,22 @@ void showTable(SymbolTable *st)
     printf("+----------------+--------+--------+------+---------+--------+\n");
 }
 
+void printParamList(paramList *p)
+{
+    paramList *curr = p;
+    printf("+----------------+--------+\n");
+    printf("| Name           | Type   |\n");
+    printf("+----------------+--------+\n");
+    while (curr != NULL)
+    {
+        // Adjust field widths as needed for your actual data
+        printf("| %-14s | %-6s |\n",
+               curr->name, getType(curr->type));
+        curr = curr->next;
+    }
+    printf("+----------------+--------+\n");
+}
+
 char *getType(int type)
 {
     switch (type)
@@ -203,6 +242,14 @@ paramList *createParamList(Type type, char *name)
     node->name = strdup(name);
     node->type = type;
     return node;
+}
+
+argList *createArgList(tnode *node)
+{
+    argList *arg = (argList *)malloc(sizeof(argList));
+    arg->node = node;
+    arg->next = NULL;
+    return arg;
 }
 
 void pushToScopeStack(SymbolTable *scope, scopeStack **top)

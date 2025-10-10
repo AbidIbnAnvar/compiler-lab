@@ -22,6 +22,7 @@
     int var_type;
     struct dimNode* dim;
     struct paramList* params;
+    struct argList* args;
 }
 
 
@@ -47,8 +48,8 @@
 %type <symbolTable> GDeclList GDecl GidList Gid LDecList LDecl
 %type <dim> Dimlist DimDecl
 %type <var_type> Type
-%type <node> ArgList
 %type <params> ParamList Param
+%type <args> ArgList
 
 %left OR
 %left AND
@@ -159,6 +160,9 @@ FDefBlock: FDefBlock FDef {
 FDef: Type ID '(' ParamList ')' {
             nextBinding = 0;
             printf("%s()\n",$2->varname);
+            SymbolTable* st = lookupEntry($2->varname,sstop);
+            printParamList($4);
+            checkparams(st->paramList,$4,$2->varname);
             SymbolTable* params = convertParamListToSymbolTable($4);
             pushToScopeStack(params,&sstop);
     }
@@ -390,8 +394,16 @@ RepeatUntilStmt : REPEAT Slist UNTIL expr ';' {
                 };
 FunctionCallStmt: ID '(' ArgList ')' ';' {
                     SymbolTable* st = lookupEntry($1->varname,sstop);
+                    checkargs($3,st->paramList,$1->varname);
                     $1->STentry = st;
-                    $$ = createTree(0,NULL,st->type,$1->varname,NODETYPE_FUNC,NULL,NULL,$3,NULL);
+                    $$ = createTree(0,NULL,st->type,$1->varname,NODETYPE_FUNC,NULL,NULL,NULL,NULL);
+                    $$->argList = $3;
+                }
+                | ID '('')'';' {
+                    SymbolTable* st = lookupEntry($1->varname,sstop);
+                    checkargs(NULL,st->paramList,$1->varname);
+                    $1->STentry = st;
+                    $$ = createTree(0,NULL,st->type,$1->varname,NODETYPE_FUNC,NULL,NULL,NULL,NULL);
                 }
                 ;
 ReturnStmt: RETURN expr ';' {
@@ -422,13 +434,11 @@ Dimlist : '[' expr ']' Dimlist {
         }
         ;
 ArgList: ArgList ',' expr {
-            $$ = createTree(0,NULL,TYPE_NULL,NULL,NODETYPE_CONNECTOR,$1,NULL,$3,NULL);
-        }
-        | expr {
+            $1->next = createArgList($3);
             $$ = $1;
         }
-        | {
-            $$ = NULL;
+        | expr {
+            $$ = createArgList($1);
         }
         ;
 expr:
@@ -501,10 +511,18 @@ expr:
         $2->type = st->type;
         $$ = createTree(0,"&",st->type,NULL,NODETYPE_REF,$2,NULL,NULL,NULL);
     }
+    | ID '('')'{
+        SymbolTable* st = lookupEntry($1->varname,sstop);
+        checkargs(NULL,st->paramList,$1->varname);
+        $$->STentry = st;
+        $$ = createTree(0,NULL,st->type,$1->varname,NODETYPE_FUNC_CALL,NULL,NULL,NULL,NULL);
+    }
     | ID '('ArgList')'{
         SymbolTable* st = lookupEntry($1->varname,sstop);
+        checkargs($3,st->paramList,$1->varname);
         $$->STentry = st;
-        $$ = createTree(0,NULL,st->type,$1->varname,NODETYPE_FUNC_CALL,NULL,NULL,$3,NULL);
+        $$ = createTree(0,NULL,st->type,$1->varname,NODETYPE_FUNC_CALL,NULL,NULL,NULL,NULL);
+        $$->argList = $3;
     }
     | ID {
         SymbolTable* st = lookupEntry($1->varname,sstop);

@@ -15,7 +15,7 @@ int factorial(int n){
     return f;
 }
 
-str hello(int c, int d){
+str hello(int c, int d,int e){
     decl
         int a,b;
     enddecl
@@ -27,6 +27,6 @@ int main(){
     decl
         int a;
     enddecl
-    hello(1,2);
+    hello();
     return 0;
 }

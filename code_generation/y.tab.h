@@ -134,8 +134,9 @@ union YYSTYPE
     int var_type;
     struct dimNode* dim;
     struct paramList* params;
+    struct argList* args;
 
-#line 139 "y.tab.h"
+#line 140 "y.tab.h"
 
 };
 typedef union YYSTYPE YYSTYPE;

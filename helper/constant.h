@@ -54,8 +54,9 @@ typedef struct tnode
     char *varname;               // variable name
     NodeType nodetype;           // to know info about node
     struct SymbolTable *STentry; // not used
-    struct SymbolTable *Lentry;
-    struct dimNode *dimNode; // for accessing dimensions (for arrays)
+    struct SymbolTable *Lentry;  // Local Entry (for functions)
+    struct dimNode *dimNode;     // for accessing dimensions (for arrays)
+    struct argList *argList;
     struct tnode *left, *right, *middle;
 } tnode;
 
@@ -91,5 +92,11 @@ typedef struct paramList
     char *name;
     struct paramList *next;
 } paramList;
+
+typedef struct argList
+{
+    tnode *node;
+    struct argList *next;
+} argList;
 
 #endif
