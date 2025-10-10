@@ -62,15 +62,12 @@
 
  Program : GDeclBlock FDefBlock MainBlock{
             head = createTree(0,NULL,TYPE_NULL,NULL,NODETYPE_CONNECTOR,$2,NULL,$3,NULL);
-            printTree(head);
         }
         | GDeclBlock MainBlock{
             head = $2;
-            printTree(head);
         }
         | MainBlock{
             head = $1;
-            printTree(head);
         }
         ;
 GDeclBlock: DECL GDeclList ENDDECL {
@@ -139,11 +136,12 @@ Gid: ID {
     ;
 
 MainBlock: INT_TYPE MAIN '(' ')' {
-            nextBinding = 1;
+            nextBinding = 0;
             printf("main()\n");
             pushToScopeStack(NULL,&sstop);
         } '{' LDeclBlock Slist ReturnStmt '}' {
             $$ = createTree(0,NULL,TYPE_INT,"main",NODETYPE_MAIN,NULL,NULL,$8,NULL);
+            $$->Lentry = sstop->symbolTable;
             popFromScopeStack(&sstop);
         } 
         ;
@@ -159,13 +157,14 @@ FDefBlock: FDefBlock FDef {
         ;
 
 FDef: Type ID '(' ParamList ')' {
-            nextBinding = 1;
+            nextBinding = 0;
             printf("%s()\n",$2->varname);
             SymbolTable* params = convertParamListToSymbolTable($4);
             pushToScopeStack(params,&sstop);
     }
      '{' LDeclBlock Slist ReturnStmt '}' {
         $$ = createTree(0,NULL,TYPE_NULL,$2->varname,NODETYPE_FUNC,NULL,$9,$10,NULL);
+        $$->Lentry = sstop->symbolTable;
         popFromScopeStack(&sstop);
     };
 
@@ -390,8 +389,9 @@ RepeatUntilStmt : REPEAT Slist UNTIL expr ';' {
                     $$ = createTree(0,NULL,TYPE_NULL,NULL,NODETYPE_REPEAT_UNTIL,$4,NULL,$2,NULL);
                 };
 FunctionCallStmt: ID '(' ArgList ')' ';' {
-                    $1->STentry = lookupEntry($1->varname,sstop);
-                    $$ = createTree(0,NULL,TYPE_NULL,$1->varname,NODETYPE_FUNC,NULL,NULL,$3,NULL);
+                    SymbolTable* st = lookupEntry($1->varname,sstop);
+                    $1->STentry = st;
+                    $$ = createTree(0,NULL,st->type,$1->varname,NODETYPE_FUNC,NULL,NULL,$3,NULL);
                 }
                 ;
 ReturnStmt: RETURN expr ';' {
@@ -426,6 +426,9 @@ ArgList: ArgList ',' expr {
         }
         | expr {
             $$ = $1;
+        }
+        | {
+            $$ = NULL;
         }
         ;
 expr:
@@ -498,15 +501,10 @@ expr:
         $2->type = st->type;
         $$ = createTree(0,"&",st->type,NULL,NODETYPE_REF,$2,NULL,NULL,NULL);
     }
-    | ID '('')' {
-        SymbolTable* st = lookupEntry($1->varname,sstop);
-        $1->STentry = st;
-        $$ = createTree(0,NULL,st->type,NULL,NODETYPE_FUNC_CALL,$1,NULL,NULL,NULL);
-    }
     | ID '('ArgList')'{
         SymbolTable* st = lookupEntry($1->varname,sstop);
-        $1->STentry = st;
-        $$ = createTree(0,NULL,st->type,NULL,NODETYPE_FUNC_CALL,$1,NULL,$3,NULL);
+        $$->STentry = st;
+        $$ = createTree(0,NULL,st->type,$1->varname,NODETYPE_FUNC_CALL,NULL,NULL,$3,NULL);
     }
     | ID {
         SymbolTable* st = lookupEntry($1->varname,sstop);
@@ -549,6 +547,7 @@ void free_memory(){
 int main(){
     yyin = fopen("../input.txt", "r");
     yyparse();
+    printTree(head);
     target_file = fopen("../target_file.xsm","w");
     code_generate();
     /* free_memory(); */

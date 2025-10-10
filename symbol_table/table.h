@@ -16,6 +16,7 @@ void appendEntry(SymbolTable *entry);
 // void appendEntryToGlobal(SymbolTable *entry);
 void showTable(SymbolTable *st);
 int exists(SymbolTable *head, char *name);
+int checkparams(tnode *args, paramList *def);
 char *getType(int type);
 void freeTable(SymbolTable *head);
 paramList *createParamList(Type type, char *name);

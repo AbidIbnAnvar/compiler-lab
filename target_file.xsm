@@ -6,7 +6,7 @@
 0
 0
 0
-MOV SP,1
+MOV SP,0
 BRKP
 MOV R0,"Exit"
 PUSH R0

@@ -53,6 +53,7 @@ tnode *createTree(int val, char *op, Type type, char *varname, NodeType nodetype
     tree->right = r;
     tree->middle = m;
     tree->STentry = STentry;
+    tree->Lentry = NULL;
     return tree;
 }
 

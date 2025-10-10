@@ -39,6 +39,12 @@ typedef enum NodeType
     NODETYPE_RETURN
 } NodeType;
 
+union constant
+{
+    int intval;
+    char *strval;
+};
+
 typedef struct tnode
 {
     int val;                     // for num
@@ -48,7 +54,8 @@ typedef struct tnode
     char *varname;               // variable name
     NodeType nodetype;           // to know info about node
     struct SymbolTable *STentry; // not used
-    struct dimNode *dimNode;     // for accessing dimensions (for arrays)
+    struct SymbolTable *Lentry;
+    struct dimNode *dimNode; // for accessing dimensions (for arrays)
     struct tnode *left, *right, *middle;
 } tnode;
 

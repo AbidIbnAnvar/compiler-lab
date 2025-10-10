@@ -1,6 +1,6 @@
 decl
     int result,factorial(int n);
-    int hello(int c, int d);
+    str hello(int c, int d);
 enddecl
 
 int factorial(int n){
@@ -15,12 +15,12 @@ int factorial(int n){
     return f;
 }
 
-int hello(int c, int d){
+str hello(int c, int d){
     decl
         int a,b;
     enddecl
     write("HELLO");
-    return 0;
+    return "Hi";
 }
 
 int main(){

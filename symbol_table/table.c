@@ -102,6 +102,22 @@ void appendEntry(SymbolTable *entry)
     }
 }
 
+int checkparams(tnode *args, paramList *params)
+{
+    while (args && params)
+    {
+        int argType = args->type;
+        int paramType = params->type;
+        args = args->right;
+        params = params->next;
+    }
+    if ((args && !params) || (!args && params))
+    {
+        return 0;
+    }
+    return 1;
+}
+
 // void appendEntryToGlobal(SymbolTable *entry)
 // {
 //     if (!sstop)

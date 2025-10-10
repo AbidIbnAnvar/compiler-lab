@@ -213,6 +213,8 @@ const char *nodetype_to_string(NodeType nodetype)
         return "MAIN";
     case NODETYPE_FUNC:
         return "FUNC";
+    case NODETYPE_FUNC_CALL:
+        return "FUNC_CALL";
     case NODETYPE_RETURN:
         return "RET";
     default:
