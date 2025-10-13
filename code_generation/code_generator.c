@@ -12,7 +12,8 @@ int stack_top = 4095;
 
 reg_index get_register()
 {
-    return ++current_register;
+    ++current_register;
+    return current_register % 20;
 }
 
 reg_index free_register()
@@ -49,7 +50,7 @@ reg_index codegen(tnode *t, int startLabel, int endLabel)
             {
                 SymbolTable *st = leftNode->left->STentry;
                 int binding = st->binding;
-                reg_index p = codegen_read_from_stack(binding);
+                reg_index p = codegen_read_from_stack(binding, st->scope);
                 codegen_store_in_stack_with_registers(r, p);
                 free_register();
                 return current_register;
@@ -58,8 +59,7 @@ reg_index codegen(tnode *t, int startLabel, int endLabel)
             else
             {
                 SymbolTable *st = leftNode->STentry;
-                int startOffset = st->binding;
-                codegen_store_in_stack(r, startOffset);
+                codegen_store_in_stack(r, st->binding, st->scope);
                 return current_register;
             }
         }
@@ -82,10 +82,7 @@ reg_index codegen(tnode *t, int startLabel, int endLabel)
         {
             // Get symbol table entry for the variable
             SymbolTable *st = t->left->STentry;
-            // Get starting offset of the variable
-            int startOffset = st->binding;
-
-            codegen_read_to_address(startOffset);
+            codegen_read_to_address(st->binding, st->scope);
         }
         return current_register;
     }
@@ -110,7 +107,7 @@ reg_index codegen(tnode *t, int startLabel, int endLabel)
             SymbolTable *st = t->left->STentry;
 
             int offset = st->binding;
-            r = codegen_read_from_stack(offset);
+            r = codegen_read_from_stack(offset, st->scope);
         }
         // number is put inside write
         else if (isLeafNode(t->left) && t->left->type == TYPE_INT)
@@ -123,6 +120,10 @@ reg_index codegen(tnode *t, int startLabel, int endLabel)
         {
             r = get_register();
             codegen_set_str_value_to_register(r, t->left->strval);
+        }
+        else if (isFuncCallNode(t->left))
+        {
+            r = codegen_function_call(t->left);
         }
         codegen_print_register(r);
         return current_register;
@@ -196,7 +197,31 @@ reg_index codegen(tnode *t, int startLabel, int endLabel)
         codegen_label_definition(end_label);
         return current_register;
     }
+    else if (isMainNode(t))
+    {
+        codegen_main_function(t);
+        return current_register;
+    }
+    else if (isFuncNode(t))
+    {
+        codegen_function(t);
+        return current_register;
+    }
+    else if (isFuncCallNode(t))
+    {
+        codegen_function_call(t);
+        return current_register;
+    }
+    // else if (isReturnNode(t))
+    // {
 
+    //     return current_register;
+    // }
+    else if (isBrkpNode(t))
+    {
+        codegen_add_breakpoint();
+        return current_register;
+    }
     codegen(t->left, startLabel, endLabel);
     codegen(t->right, startLabel, endLabel);
     return current_register;
@@ -211,6 +236,7 @@ reg_index codegen_evaluate_expression(tnode *t)
     // If the node is an array node
     else if (isArrayNode(t))
     {
+
         reg_index binding = codegen_array(t);
         codegen_read_from_stack_with_register(binding);
         return binding;
@@ -227,17 +253,17 @@ reg_index codegen_evaluate_expression(tnode *t)
     {
         SymbolTable *st = t->left->STentry;
         int binding = st->binding;
-        reg_index p = codegen_read_from_stack(binding); // contains values' address
+        reg_index p = codegen_read_from_stack(binding, st->scope); // contains values' address
         codegen_read_from_stack_with_register(p);
         return p;
     }
     // If the node is leaf node, then it is either a variable or a number or a string
     else if (isLeafNode(t))
     {
-        reg_index r = get_register();
         // if the node is a number or string
         if (t->varname == NULL)
         {
+            reg_index r = get_register();
             if (t->type == TYPE_INT)
             {
                 codegen_set_int_value_to_register(r, t->val);
@@ -258,10 +284,16 @@ reg_index codegen_evaluate_expression(tnode *t)
         {
             SymbolTable *st = t->STentry;
             int offset = st->binding;
-            fprintf(target_file, "MOV R%d,[%d]\n", r, offset);
+            codegen_read_from_stack(offset, st->scope);
         }
         return current_register;
     }
+    else if (isFuncCallNode(t))
+    {
+        reg_index r = codegen_function_call(t);
+        return current_register;
+    }
+
     reg_index left_expression = codegen_evaluate_expression(t->left);
     reg_index right_expression = codegen_evaluate_expression(t->right);
     codegen_operation(t, left_expression, right_expression);
@@ -319,6 +351,133 @@ reg_index codegen_get_array_offset(dimNode *decl, dimNode *node)
     codegen_multiply_two_registers(valReg, productReg);
     codegen_add_two_registers(offsetReg, valReg);
     return offsetReg;
+}
+
+reg_index codegen_function(tnode *t)
+{
+    // Function label
+    SymbolTable *st = lookupEntry(t->varname, sstop);
+    fprintf(target_file, "F%d:", st->flabel);
+
+    // Pushing Old BP
+    fprintf(target_file, "PUSH BP\n");
+    // Changing BP to SP
+    fprintf(target_file, "MOV BP, SP\n");
+
+    SymbolTable *local = t->Lentry;
+    int total_size = 0;
+    while (local)
+    {
+        if (local->binding > 0)
+        {
+            total_size = max(total_size, local->binding + local->size - 1);
+        }
+        local = local->next;
+    }
+    fprintf(target_file, "ADD SP, %d\n", total_size);
+    codegen(t->left, -1, -1);
+    fprintf(target_file, "SUB SP, %d\n", total_size);
+
+    // Return
+    // Setting return value
+    reg_index r = codegen_evaluate_expression(t->right);
+    reg_index rel = get_register();
+    fprintf(target_file, "MOV R%d, BP\n", rel);
+    fprintf(target_file, "SUB R%d, 2\n", rel);
+    fprintf(target_file, "MOV [R%d], R%d\n", rel, r);
+    free_register();
+    free_register();
+    // Restoring old BP value
+    fprintf(target_file, "POP BP\n");
+    fprintf(target_file, "RET\n");
+
+    return current_register;
+}
+
+reg_index codegen_function_call(tnode *t)
+{
+    SymbolTable *st = lookupEntry(t->varname, sstop);
+    // Push registers in reverse order to get the registers in order of popping
+    int push_count = 0;
+    for (int i = current_register; i >= 0; i--)
+    {
+        push_count++;
+        fprintf(target_file, "PUSH R%d\n", i);
+        free_register();
+    }
+
+    // Push arguments to the stack
+    if (t->argList)
+    {
+        t->argList = reverseArgList(t->argList);
+        argList *curr = t->argList;
+        while (curr)
+        {
+            reg_index r = codegen_evaluate_expression(curr->node);
+            codegen_push_register(r);
+            free_register();
+            curr = curr->next;
+        }
+        t->argList = reverseArgList(t->argList);
+    }
+
+    // Push empty space for return value
+    codegen_push_register(0);
+    fprintf(target_file, "CALL F%d\n", st->flabel);
+    codegen_pop_register(push_count == 0 ? 1 : push_count);
+    if (t->argList)
+    {
+        argList *curr = t->argList;
+        while (curr)
+        {
+            codegen_pop_register(0);
+            curr = curr->next;
+        }
+    }
+
+    for (int i = 0; i < push_count; i++)
+    {
+        codegen_pop_register(i);
+    }
+    if (push_count == 0)
+    {
+        current_register = 1;
+    }
+    else
+    {
+        current_register = push_count;
+    }
+    return current_register;
+}
+
+reg_index codegen_main_function(tnode *t)
+{
+    fprintf(target_file, "F0:");
+
+    // Pushing Old BP
+    fprintf(target_file, "PUSH BP\n");
+    // Changing BP to SP
+    fprintf(target_file, "MOV BP, SP\n");
+
+    SymbolTable *local = t->Lentry;
+    int total_size = 0;
+    while (local)
+    {
+        if (local->binding > 0)
+        {
+            total_size = max(total_size, local->binding + local->size - 1);
+        }
+        local = local->next;
+    }
+    fprintf(target_file, "ADD SP, %d\n", total_size);
+    codegen(t->left, -1, -1);
+    fprintf(target_file, "SUB SP, %d\n", total_size);
+
+    // Restoring old BP value
+    fprintf(target_file, "POP BP\n");
+
+    fprintf(target_file, "RET\n");
+    return current_register;
 }
 
 reg_index codegen_operation(tnode *t, reg_index left_expression, reg_index right_expression)
@@ -469,8 +628,11 @@ reg_index codegen_equal_two_registers(reg_index left_expression, reg_index right
 
 reg_index codegen_or_two_registers(reg_index left_expression, reg_index right_expression)
 {
-    fprintf(target_file, "NE R%d,0\n", left_expression);
-    fprintf(target_file, "NE R%d,0\n", right_expression);
+    reg_index zero = get_register();
+    fprintf(target_file, "MOV R%d, 0\n", zero);
+    fprintf(target_file, "NE R%d, R%d\n", left_expression, zero);
+    fprintf(target_file, "NE R%d, R%d\n", right_expression, zero);
+    free_register();
     fprintf(target_file, "ADD R%d,R%d\n", left_expression, right_expression);
     free_register();
     return left_expression;
@@ -478,8 +640,11 @@ reg_index codegen_or_two_registers(reg_index left_expression, reg_index right_ex
 
 reg_index codegen_and_two_registers(reg_index left_expression, reg_index right_expression)
 {
-    fprintf(target_file, "NE R%d,0\n", left_expression);
-    fprintf(target_file, "NE R%d,0\n", right_expression);
+    reg_index zero = get_register();
+    fprintf(target_file, "MOV R%d, 0\n", zero);
+    fprintf(target_file, "NE R%d, R%d\n", left_expression, zero);
+    fprintf(target_file, "NE R%d, R%d\n", right_expression, zero);
+    free_register();
     fprintf(target_file, "MUL R%d,R%d\n", left_expression, right_expression);
     free_register();
     return left_expression;
@@ -530,9 +695,20 @@ void codegen_initialize_stack(int addr)
     fprintf(target_file, "MOV SP,%d\n", addr);
 }
 
-void codegen_store_in_stack(reg_index reg, int addr)
+void codegen_store_in_stack(reg_index reg, int addr, Scope scope)
 {
-    fprintf(target_file, "MOV [%d],R%d\n", addr, reg);
+    if (scope == GLOBAL)
+    {
+        fprintf(target_file, "MOV [%d],R%d\n", addr, reg);
+    }
+    else
+    {
+        reg_index addr_reg = get_register();
+        fprintf(target_file, "MOV R%d, BP\n", addr_reg);
+        fprintf(target_file, "ADD R%d, %d\n", addr_reg, addr);
+        fprintf(target_file, "MOV [R%d],R%d\n", addr_reg, reg);
+        free_register();
+    }
     free_register();
 }
 
@@ -541,10 +717,19 @@ void codegen_store_in_stack_with_registers(reg_index src, reg_index dest)
     fprintf(target_file, "MOV [R%d],R%d\n", dest, src);
 }
 
-reg_index codegen_read_from_stack(int addr)
+reg_index codegen_read_from_stack(int addr, Scope scope)
 {
     reg_index r = get_register();
-    fprintf(target_file, "MOV R%d,[%d]\n", r, addr);
+    if (scope == GLOBAL)
+    {
+        fprintf(target_file, "MOV R%d,[%d]\n", r, addr);
+    }
+    else
+    {
+        fprintf(target_file, "MOV R%d, BP\n", r);
+        fprintf(target_file, "ADD R%d,%d\n", r, addr);
+        fprintf(target_file, "MOV R%d,[R%d]\n", r, r);
+    }
     return r;
 }
 
@@ -554,27 +739,38 @@ reg_index codegen_read_from_stack_with_register(reg_index addr)
     return addr;
 }
 
-void codegen_print_address(int addr)
+void codegen_print_address(int addr, Scope scope)
 {
     while (current_register != -1)
     {
         free_register();
     }
-    get_register();
-    fprintf(target_file, "MOV R%d,\"Write\"\n", current_register);
-    fprintf(target_file, "PUSH R%d\n", current_register);
-    fprintf(target_file, "MOV R%d,-2\n", current_register);
-    fprintf(target_file, "PUSH R%d\n", current_register);
-    fprintf(target_file, "MOV R%d,[%d]\n", current_register, addr);
-    fprintf(target_file, "PUSH R%d\n", current_register);
-    fprintf(target_file, "PUSH R%d\n", current_register);
-    fprintf(target_file, "PUSH R%d\n", current_register);
+    reg_index r0 = get_register();
+    reg_index r1 = get_register();
+    if (scope == GLOBAL)
+    {
+        fprintf(target_file, "MOV R%d, %d\n", r1, addr);
+    }
+    else
+    {
+        fprintf(target_file, "MOV R%d, BP\n", r1);
+        fprintf(target_file, "ADD R%d, %d\n", r1, addr);
+    }
+    fprintf(target_file, "MOV R%d,\"Write\"\n", r0);
+    fprintf(target_file, "PUSH R%d\n", r0);
+    fprintf(target_file, "MOV R%d,-2\n", r0);
+    fprintf(target_file, "PUSH R%d\n", r0);
+    fprintf(target_file, "MOV R%d,[%d]\n", r0, r1);
+    fprintf(target_file, "PUSH R%d\n", r0);
+    fprintf(target_file, "PUSH R%d\n", r0);
+    fprintf(target_file, "PUSH R%d\n", r0);
     fprintf(target_file, "CALL 0\n");
-    fprintf(target_file, "POP R%d\n", current_register);
-    fprintf(target_file, "POP R%d\n", current_register);
-    fprintf(target_file, "POP R%d\n", current_register);
-    fprintf(target_file, "POP R%d\n", current_register);
-    fprintf(target_file, "POP R%d\n", current_register);
+    fprintf(target_file, "POP R%d\n", r0);
+    fprintf(target_file, "POP R%d\n", r0);
+    fprintf(target_file, "POP R%d\n", r0);
+    fprintf(target_file, "POP R%d\n", r0);
+    fprintf(target_file, "POP R%d\n", r0);
+    free_register();
 }
 
 void codegen_print_register(reg_index reg)
@@ -586,47 +782,62 @@ void codegen_print_register(reg_index reg)
     {
         free_register();
     }
-    get_register();
-    fprintf(target_file, "MOV R%d,\"Write\"\n", current_register);
-    fprintf(target_file, "PUSH R%d\n", current_register);
-    fprintf(target_file, "MOV R%d,-2\n", current_register);
-    fprintf(target_file, "PUSH R%d\n", current_register);
-    fprintf(target_file, "MOV R%d,[%d]\n", current_register, reg_address);
-    fprintf(target_file, "PUSH R%d\n", current_register);
-    fprintf(target_file, "PUSH R%d\n", current_register);
-    fprintf(target_file, "PUSH R%d\n", current_register);
+    reg_index r0 = get_register();
+    reg_index r1 = get_register();
+    fprintf(target_file, "MOV R%d, SP\n", r1);
+    fprintf(target_file, "MOV R%d,\"Write\"\n", r0);
+    fprintf(target_file, "PUSH R%d\n", r0);
+    fprintf(target_file, "MOV R%d,-2\n", r0);
+    fprintf(target_file, "PUSH R%d\n", r0);
+    fprintf(target_file, "MOV R%d,[R%d]\n", r0, r1);
+    fprintf(target_file, "PUSH R%d\n", r0);
+    fprintf(target_file, "PUSH R%d\n", r0);
+    fprintf(target_file, "PUSH R%d\n", r0);
     fprintf(target_file, "CALL 0\n");
-    fprintf(target_file, "POP R%d\n", current_register);
-    fprintf(target_file, "POP R%d\n", current_register);
-    fprintf(target_file, "POP R%d\n", current_register);
-    fprintf(target_file, "POP R%d\n", current_register);
-    fprintf(target_file, "POP R%d\n", current_register);
-    fprintf(target_file, "POP R%d\n", current_register);
+    fprintf(target_file, "POP R%d\n", r0);
+    fprintf(target_file, "POP R%d\n", r0);
+    fprintf(target_file, "POP R%d\n", r0);
+    fprintf(target_file, "POP R%d\n", r0);
+    fprintf(target_file, "POP R%d\n", r0);
+    fprintf(target_file, "POP R%d\n", r0);
+    free_register();
+    free_register();
     stack_top--;
 }
 
-void codegen_read_to_address(int addr)
+void codegen_read_to_address(int addr, Scope scope)
 {
     int push_count = 0;
     while (current_register != -1)
     {
         free_register();
     }
-    get_register();
-    fprintf(target_file, "MOV R%d,\"Read\"\n", current_register);
-    fprintf(target_file, "PUSH R%d\n", current_register);
-    fprintf(target_file, "MOV R%d,-1\n", current_register);
-    fprintf(target_file, "PUSH R%d\n", current_register);
-    fprintf(target_file, "MOV R%d,%d\n", current_register, addr);
-    fprintf(target_file, "PUSH R%d\n", current_register);
-    fprintf(target_file, "PUSH R%d\n", current_register);
-    fprintf(target_file, "PUSH R%d\n", current_register);
+    reg_index r0 = get_register();
+    fprintf(target_file, "MOV R%d,\"Read\"\n", r0);
+    fprintf(target_file, "PUSH R%d\n", r0);
+    fprintf(target_file, "MOV R%d,-1\n", r0);
+    fprintf(target_file, "PUSH R%d\n", r0);
+    if (scope == GLOBAL)
+    {
+        fprintf(target_file, "MOV R%d,%d\n", r0, addr);
+    }
+    else
+    {
+        reg_index r1 = get_register();
+        fprintf(target_file, "MOV R%d,BP\n", r1);
+        fprintf(target_file, "ADD R%d,%d\n", r1, addr);
+        fprintf(target_file, "MOV R%d,R%d\n", r0, r1);
+        free_register();
+    }
+    fprintf(target_file, "PUSH R%d\n", r0);
+    fprintf(target_file, "PUSH R%d\n", r0);
+    fprintf(target_file, "PUSH R%d\n", r0);
     fprintf(target_file, "CALL 0\n");
-    fprintf(target_file, "POP R%d\n", current_register);
-    fprintf(target_file, "POP R%d\n", current_register);
-    fprintf(target_file, "POP R%d\n", current_register);
-    fprintf(target_file, "POP R%d\n", current_register);
-    fprintf(target_file, "POP R%d\n", current_register);
+    fprintf(target_file, "POP R%d\n", r0);
+    fprintf(target_file, "POP R%d\n", r0);
+    fprintf(target_file, "POP R%d\n", r0);
+    fprintf(target_file, "POP R%d\n", r0);
+    fprintf(target_file, "POP R%d\n", r0);
     free_register();
 }
 
@@ -651,6 +862,16 @@ void codegen_read_to_register(reg_index reg)
     {
         free_register();
     }
+}
+
+void codegen_push_register(reg_index reg)
+{
+    fprintf(target_file, "PUSH R%d\n", reg);
+}
+
+void codegen_pop_register(reg_index reg)
+{
+    fprintf(target_file, "POP R%d\n", reg);
 }
 
 void codegen_call_exit()

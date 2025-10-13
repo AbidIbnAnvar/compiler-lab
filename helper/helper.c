@@ -97,9 +97,34 @@ bool isRefNode(tnode *t)
     return t && t->nodetype == NODETYPE_REF;
 }
 
+bool isFuncNode(tnode *t)
+{
+    return t && t->nodetype == NODETYPE_FUNC;
+}
+
+bool isMainNode(tnode *t)
+{
+    return t && t->nodetype == NODETYPE_MAIN;
+}
+
+bool isFuncCallNode(tnode *t)
+{
+    return t && t->nodetype == NODETYPE_FUNC_CALL;
+}
+
+bool isBrkpNode(tnode *t)
+{
+    return t && t->nodetype == NODETYPE_BRKP;
+}
+
+bool isReturnNode(tnode *t)
+{
+    return t && t->nodetype == NODETYPE_RETURN;
+}
+
 bool matchesOperator(tnode *t, char *op)
 {
-    return t && (strcmp(t->op, op) == 0);
+    return t && t->op && (strcmp(t->op, op) == 0);
 }
 
 bool isRelationalOperator(tnode *t)
@@ -217,7 +242,14 @@ const char *nodetype_to_string(NodeType nodetype)
         return "FUNC_CALL";
     case NODETYPE_RETURN:
         return "RET";
+    case NODETYPE_BRKP:
+        return "BRKP";
     default:
         return "UNKNOWN";
     }
+}
+
+int max(int a, int b)
+{
+    return (a > b) ? a : b;
 }

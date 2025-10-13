@@ -46,17 +46,23 @@ void codegen_set_str_value_to_register(reg_index r, char *value);
 void codegen_generate_header();
 void codegen_add_breakpoint();
 void codegen_initialize_stack(int addr);
-void codegen_store_in_stack(reg_index reg, int addr);
+void codegen_store_in_stack(reg_index reg, int addr, Scope scope);
 void codegen_store_in_stack_with_registers(reg_index src, reg_index dest);
-reg_index codegen_read_from_stack(int addr);
+reg_index codegen_read_from_stack(int addr, Scope scope);
 reg_index codegen_read_from_stack_with_register(reg_index addr);
-void codegen_print_address(int addr);
+void codegen_print_address(int addr, Scope scope);
 void codegen_print_register(reg_index reg);
-void codegen_read_to_address(int addr);
+void codegen_read_to_address(int addr, Scope scope);
 void codegen_read_to_register(reg_index reg);
+void codegen_push_register(reg_index reg);
+void codegen_pop_register(reg_index reg);
 void codegen_call_exit();
 
 reg_index codegen_array(tnode *t);
 reg_index codegen_get_array_offset(dimNode *decl, dimNode *node);
+
+reg_index codegen_function(tnode *t);
+reg_index codegen_function_call(tnode *t);
+reg_index codegen_main_function(tnode *t);
 
 #endif

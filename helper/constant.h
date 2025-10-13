@@ -36,8 +36,15 @@ typedef enum NodeType
     NODETYPE_MAIN,
     NODETYPE_FUNC,
     NODETYPE_FUNC_CALL,
-    NODETYPE_RETURN
+    NODETYPE_RETURN,
+    NODETYPE_BRKP
 } NodeType;
+
+typedef enum Scope
+{
+    LOCAL,
+    GLOBAL
+} Scope;
 
 union constant
 {
@@ -68,6 +75,7 @@ typedef struct SymbolTable
     int size;                    // variable size
     int binding;                 // variable binding in stack
     int flabel;                  // function's label
+    Scope scope;                 // scope of variable
     struct dimNode *dimNode;     // variable's declared dimension (for arrays)
     struct paramList *paramList; // for formal parameters (for functions)
     struct SymbolTable *next;

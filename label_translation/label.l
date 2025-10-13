@@ -13,13 +13,41 @@ DIGIT   [0-9]
 
 %%
 
-"L"{DIGIT}+: {
+"L"{DIGIT}+":" {
+    int address = 2056+2*(line_no-8);
+    yytext[yyleng - 1] = '\0';
+    put(yytext,address);
+}
+
+"F"{DIGIT}+":" {
     int address = 2056+2*(line_no-8);
     yytext[yyleng - 1] = '\0';
     put(yytext,address);
 }
 
 "L"{DIGIT}+ {
+    if(fetchedAddress){
+        fprintf(target_file,"%d",get(yytext));
+    }else{
+        fprintf(target_file,"%s",yytext);
+    }
+}
+
+"F"{DIGIT}+ {
+    if(fetchedAddress){
+        fprintf(target_file,"%d",get(yytext));
+    }else{
+        fprintf(target_file,"%s",yytext);
+    }
+}
+
+"L_EXIT:" {
+    int address = 2056+2*(line_no-8);
+    yytext[yyleng - 1] = '\0';
+    put(yytext,address);
+}
+
+"L_EXIT" {
     if(fetchedAddress){
         fprintf(target_file,"%d",get(yytext));
     }else{

@@ -9,13 +9,13 @@
 %option yylineno
 
 DIGIT   [0-9]
-LETTER [a-z]
+LETTER [a-zA-Z]
 
 %%
 
 "main" {return MAIN;}
 "read" {return READ;}
-"write" {return WRITE;}
+"print" {return WRITE;}
 "if" {return IF;}
 "then" {return THEN;}
 "else" {return ELSE;}
@@ -32,6 +32,9 @@ LETTER [a-z]
 "int" {return INT_TYPE;}
 "str" {return STR_TYPE;}
 "return" {return RETURN;}
+"breakpoint" {return BRKP;}
+"begin" {return BEGINSTMT;}
+"end" {return ENDSTMT;}
 
 "+" {return PLUS;}
 "-" {return MINUS;}

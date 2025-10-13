@@ -83,7 +83,10 @@ extern int yydebug;
     INT_TYPE = 289,
     STR_TYPE = 290,
     MAIN = 291,
-    RETURN = 292
+    RETURN = 292,
+    BRKP = 293,
+    BEGINSTMT = 294,
+    ENDSTMT = 295
   };
 #endif
 /* Tokens.  */
@@ -122,6 +125,9 @@ extern int yydebug;
 #define STR_TYPE 290
 #define MAIN 291
 #define RETURN 292
+#define BRKP 293
+#define BEGINSTMT 294
+#define ENDSTMT 295
 
 /* Value type.  */
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
@@ -136,7 +142,7 @@ union YYSTYPE
     struct paramList* params;
     struct argList* args;
 
-#line 140 "y.tab.h"
+#line 146 "y.tab.h"
 
 };
 typedef union YYSTYPE YYSTYPE;

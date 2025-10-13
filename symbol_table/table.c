@@ -1,27 +1,36 @@
 #include "table.h"
-#include "../helper/constant.h"
-#include "../tree/tree.h"
 
 scopeStack *sstop = NULL;
 int nextBinding = 4096;
-int currentFLabel = 0;
+int initialStackTop = 4095;
+int currentFLabel = 1;
 
-SymbolTable *createEntry(char *name, int type, int size, dimNode *dimNode, paramList *paramList, SymbolTable *next)
+SymbolTable *createEntry(char *name, int type, int size, int flabel, Scope scope, dimNode *dimNode, paramList *paramList, SymbolTable *next)
 {
     SymbolTable *entry = (SymbolTable *)malloc(sizeof(SymbolTable));
     entry->name = name;
     entry->type = type;
-    entry->size = size;
-    entry->binding = nextBinding;
-    nextBinding += size;
-    entry->flabel = -1;
+    if (flabel == -1)
+    {
+        entry->size = size;
+        entry->binding = nextBinding;
+        nextBinding += size;
+        initialStackTop = max(initialStackTop, nextBinding - 1);
+    }
+    else
+    {
+        entry->size = 0;
+        entry->binding = -1;
+    }
+    entry->scope = scope;
+    entry->flabel = flabel;
     entry->dimNode = dimNode;
     entry->paramList = paramList;
     entry->next = next;
     return entry;
 }
 
-struct SymbolTable *lookupEntry(char *name, scopeStack *top)
+SymbolTable *lookupEntry(char *name, scopeStack *top)
 {
     scopeStack *curr = top;
     while (curr)
@@ -43,12 +52,26 @@ struct SymbolTable *lookupEntry(char *name, scopeStack *top)
     return NULL;
 }
 
-void createAndAppendEntry(char *name, int type, int size)
+SymbolTable *lookupSymbolTable(char *name, SymbolTable *head)
+{
+    SymbolTable *currEntry = head;
+    while (currEntry)
+    {
+        if (strcmp(currEntry->name, name) == 0)
+        {
+            return currEntry;
+        }
+        currEntry = currEntry->next;
+    }
+    return NULL;
+}
+
+void createAndAppendEntry(char *name, int type, int size, int flabel, Scope scope)
 {
     if (!sstop)
     {
         sstop = (scopeStack *)malloc(sizeof(scopeStack));
-        sstop->symbolTable = createEntry(name, type, size, NULL, NULL, NULL);
+        sstop->symbolTable = createEntry(name, type, size, flabel, scope, NULL, NULL, NULL);
         sstop->prev = NULL;
         sstop->next = NULL;
         return;
@@ -56,7 +79,7 @@ void createAndAppendEntry(char *name, int type, int size)
     SymbolTable *curr = sstop->symbolTable;
     if (curr == NULL)
     {
-        sstop->symbolTable = createEntry(name, type, size, NULL, NULL, NULL);
+        sstop->symbolTable = createEntry(name, type, size, flabel, scope, NULL, NULL, NULL);
     }
     else
     {
@@ -69,7 +92,7 @@ void createAndAppendEntry(char *name, int type, int size)
             }
             curr = curr->next;
         }
-        curr->next = createEntry(name, type, size, NULL, NULL, NULL);
+        curr->next = createEntry(name, type, size, flabel, scope, NULL, NULL, NULL);
     }
 }
 
@@ -141,53 +164,22 @@ void checkargs(argList *args, paramList *params, char *fname)
     }
 }
 
-// void appendEntryToGlobal(SymbolTable *entry)
-// {
-//     if (!sstop)
-//     {
-//         sstop = (scopeStack *)malloc(sizeof(scopeStack));
-//         sstop->symbolTable = entry;
-//         sstop->prev = NULL;
-//         sstop->next = NULL;
-//         return;
-//     }
-//     scopeStack *curr = sstop;
-//     while (curr->prev)
-//     {
-//         curr = curr->prev;
-//     }
-//     SymbolTable *stTable = sstop->symbolTable;
-//     if (!gTable)
-//     {
-//         gTable = entry;
-//     }
-//     else
-//     {
-//         SymbolTable *currEntry = gTable;
-//         while (currEntry->next)
-//         {
-//             currEntry = currEntry->next;
-//         }
-//         currEntry->next = entry;
-//     }
-// }
-
 void showTable(SymbolTable *st)
 {
     SymbolTable *curr = st;
-    printf("+----------------+--------+--------+------+---------+--------+\n");
-    printf("| Name           | Type   | Base   | Size | Binding | FLabel |\n");
-    printf("+----------------+--------+--------+------+---------+--------+\n");
+    printf("+----------------+--------+--------+------+---------+--------+--------+\n");
+    printf("| Name           | Type   | Base   | Size | Binding | FLabel | Scope  |\n");
+    printf("+----------------+--------+--------+------+---------+--------+--------+\n");
 
     while (curr != NULL)
     {
         // Adjust field widths as needed for your actual data
-        printf("| %-14s | %-6s | %-6s | %-4d | %-7d | %-6d |\n",
-               curr->name, getType(curr->type), getType(curr->vartype), curr->size, curr->binding, curr->flabel);
+        printf("| %-14s | %-6s | %-6s | %-4d | %-7d | %-6d | %-6s |\n",
+               curr->name, getType(curr->type), getType(curr->vartype), curr->size, curr->binding, curr->flabel, (curr->scope == LOCAL ? "Local" : "Global"));
         curr = curr->next;
     }
 
-    printf("+----------------+--------+--------+------+---------+--------+\n");
+    printf("+----------------+--------+--------+------+---------+--------+--------+\n");
 }
 
 void printParamList(paramList *p)
@@ -252,6 +244,32 @@ argList *createArgList(tnode *node)
     return arg;
 }
 
+paramList *reverseParamList(paramList *head)
+{
+    paramList *prev = NULL, *curr = head, *next = NULL;
+    while (curr)
+    {
+        next = curr->next;
+        curr->next = prev;
+        prev = curr;
+        curr = next;
+    }
+    return prev;
+}
+
+argList *reverseArgList(argList *head)
+{
+    argList *prev = NULL, *curr = head, *next = NULL;
+    while (curr)
+    {
+        next = curr->next;
+        curr->next = prev;
+        prev = curr;
+        curr = next;
+    }
+    return prev;
+}
+
 void pushToScopeStack(SymbolTable *scope, scopeStack **top)
 {
     scopeStack *node = (scopeStack *)malloc(sizeof(scopeStack));
@@ -289,7 +307,7 @@ SymbolTable *convertParamListToSymbolTable(paramList *plist)
         node->type = plist->type;
         node->size = 1;
         node->binding = nextBinding;
-        nextBinding += 1;
+        nextBinding -= 1;
         node->flabel = -1;
         node->next = NULL;
         if (head == NULL)

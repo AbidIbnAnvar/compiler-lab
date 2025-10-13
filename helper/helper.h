@@ -24,6 +24,11 @@ bool isDeclNode(tnode *t);
 bool isArrayNode(tnode *t);
 bool isAccessNode(tnode *t);
 bool isRefNode(tnode *t);
+bool isFuncNode(tnode *t);
+bool isMainNode(tnode *t);
+bool isFuncCallNode(tnode *t);
+bool isBrkpNode(tnode *t);
+bool isReturnNode(tnode *t);
 
 bool matchesOperator(tnode *t, char *op);
 bool isRelationalOperator(tnode *t);
@@ -34,5 +39,7 @@ void prefixprint(tnode *t);
 
 const char *type_to_string(Type type);
 const char *nodetype_to_string(NodeType nodetype);
+
+int max(int a, int b);
 
 #endif

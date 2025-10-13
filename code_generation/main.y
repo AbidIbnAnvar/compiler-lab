@@ -38,8 +38,10 @@
 %token INT_TYPE STR_TYPE
 %token MAIN
 %token RETURN
+%token BRKP
+%token BEGINSTMT ENDSTMT
 
-%type <node> expr Slist InputStmt Stmt OutputStmt AsgStmt FunctionCallStmt ReturnStmt
+%type <node> expr Slist InputStmt Stmt OutputStmt AsgStmt FunctionCallStmt ReturnStmt BreakPointStmt
 %type <node> IfStmt WhileStmt 
 %type <node> BreakStmt ContinueStmt
 %type <node> DoWhileStmt RepeatUntilStmt
@@ -121,27 +123,26 @@ GidList: GidList ',' Gid {
         ;
 
 Gid: ID {
-        $$ = createEntry($1->varname,$1->type,1,NULL,NULL,NULL);
+        $$ = createEntry($1->varname,$1->type,1,-1,GLOBAL,NULL,NULL,NULL);
     }
     | ID DimDecl {
         int size = getArraySize($2);
-        $$ = createEntry($1->varname,$1->type,size,$2,NULL,NULL);
+        $$ = createEntry($1->varname,$1->type,size,-1,GLOBAL,$2,NULL,NULL);
     }
     | MUL ID {
-        $$ = createEntry($2->varname,TYPE_PTR,1,NULL,NULL,NULL);
+        $$ = createEntry($2->varname,TYPE_PTR,1,-1,GLOBAL,NULL,NULL,NULL);
     }
     | ID '('ParamList')' {
-        $$ = createEntry($1->varname,$1->type,1,NULL,$3,NULL);
-        $$->flabel = currentFLabel++;
+        $$ = createEntry($1->varname,$1->type,1,currentFLabel++,GLOBAL,NULL,$3,NULL);
     }
     ;
 
 MainBlock: INT_TYPE MAIN '(' ')' {
-            nextBinding = 0;
+            nextBinding = 1;
             printf("main()\n");
             pushToScopeStack(NULL,&sstop);
-        } '{' LDeclBlock Slist ReturnStmt '}' {
-            $$ = createTree(0,NULL,TYPE_INT,"main",NODETYPE_MAIN,NULL,NULL,$8,NULL);
+        } '{' LDeclBlock BEGINSTMT Slist ReturnStmt ENDSTMT '}' {
+            $$ = createTree(0,NULL,TYPE_INT,"main",NODETYPE_MAIN,$9,NULL,$10,NULL);
             $$->Lentry = sstop->symbolTable;
             popFromScopeStack(&sstop);
         } 
@@ -158,16 +159,17 @@ FDefBlock: FDefBlock FDef {
         ;
 
 FDef: Type ID '(' ParamList ')' {
-            nextBinding = 0;
             printf("%s()\n",$2->varname);
             SymbolTable* st = lookupEntry($2->varname,sstop);
-            printParamList($4);
+            // printParamList($4);
             checkparams(st->paramList,$4,$2->varname);
+            nextBinding = -3;
             SymbolTable* params = convertParamListToSymbolTable($4);
             pushToScopeStack(params,&sstop);
+            nextBinding = 1;
     }
-     '{' LDeclBlock Slist ReturnStmt '}' {
-        $$ = createTree(0,NULL,TYPE_NULL,$2->varname,NODETYPE_FUNC,NULL,$9,$10,NULL);
+     '{' LDeclBlock BEGINSTMT Slist ReturnStmt ENDSTMT '}' {
+        $$ = createTree(0,NULL,TYPE_NULL,$2->varname,NODETYPE_FUNC,$10,NULL,$11,NULL);
         $$->Lentry = sstop->symbolTable;
         popFromScopeStack(&sstop);
     };
@@ -214,7 +216,10 @@ LDeclBlock: DECL LDecList ENDDECL {
             showTable(sstop->symbolTable);
         } 
         | DECL ENDDECL {
-            showTable(sstop->symbolTable);
+            // showTable(sstop->symbolTable);
+        }
+        | {
+            // showTable(sstop->symbolTable);
         }
         ;
 
@@ -253,11 +258,11 @@ VarList : VarList ',' ID {
                 curr = curr->next;
             }
             // Append entry to the end of the symbol table
-            curr->next = createEntry($3->varname,$3->type,1,NULL,NULL,NULL);
+            curr->next = createEntry($3->varname,$3->type,1,-1,LOCAL,NULL,NULL,NULL);
             $$ = $1;
         } 
         | ID {
-            $$ = createEntry($1->varname,$1->type,1,NULL,NULL,NULL);
+            $$ = createEntry($1->varname,$1->type,1,-1,LOCAL,NULL,NULL,NULL);
         } 
         | VarList ',' ID DimDecl {
             SymbolTable* curr = $1;
@@ -266,23 +271,23 @@ VarList : VarList ',' ID {
             }
 
             int size = getArraySize($4);
-            curr->next = createEntry($3->varname,$3->type,size,$4,NULL,NULL);
+            curr->next = createEntry($3->varname,$3->type,size,-1,LOCAL,$4,NULL,NULL);
             $$ = $1;
         }
         | ID DimDecl {
             int size = getArraySize($2);
-            $$ = createEntry($1->varname,$1->type,size,$2,NULL,NULL);
+            $$ = createEntry($1->varname,$1->type,size,-1,LOCAL,$2,NULL,NULL);
         }
         | VarList ',' MUL ID {
             SymbolTable* curr = $1;
             while(curr->next){
                 curr = curr->next;
             }
-            curr->next = createEntry($4->varname,TYPE_PTR,1,NULL,NULL,NULL);
+            curr->next = createEntry($4->varname,TYPE_PTR,1,-1,LOCAL,NULL,NULL,NULL);
             $$ = $1;
         }
         | MUL ID {
-            $$ = createEntry($2->varname,TYPE_PTR,1,NULL,NULL,NULL);
+            $$ = createEntry($2->varname,TYPE_PTR,1,-1,LOCAL,NULL,NULL,NULL);
         }
         ;
 
@@ -320,6 +325,9 @@ Stmt : InputStmt {
             $$ = $1;
         }
         | FunctionCallStmt {
+            $$ = $1;
+        }
+        | BreakPointStmt {
             $$ = $1;
         }
         ;
@@ -396,20 +404,26 @@ FunctionCallStmt: ID '(' ArgList ')' ';' {
                     SymbolTable* st = lookupEntry($1->varname,sstop);
                     checkargs($3,st->paramList,$1->varname);
                     $1->STentry = st;
-                    $$ = createTree(0,NULL,st->type,$1->varname,NODETYPE_FUNC,NULL,NULL,NULL,NULL);
+                    $$ = createTree(0,NULL,st->type,$1->varname,NODETYPE_FUNC_CALL,NULL,NULL,NULL,NULL);
                     $$->argList = $3;
                 }
                 | ID '('')'';' {
                     SymbolTable* st = lookupEntry($1->varname,sstop);
                     checkargs(NULL,st->paramList,$1->varname);
                     $1->STentry = st;
-                    $$ = createTree(0,NULL,st->type,$1->varname,NODETYPE_FUNC,NULL,NULL,NULL,NULL);
+                    $$ = createTree(0,NULL,st->type,$1->varname,NODETYPE_FUNC_CALL,NULL,NULL,NULL,NULL);
                 }
                 ;
 ReturnStmt: RETURN expr ';' {
-            $$ = createTree(0,NULL,TYPE_NULL,NULL,NODETYPE_RETURN,NULL,NULL,$2,NULL);
+            $$ = createTree(0,NULL,TYPE_NULL,NULL,NODETYPE_RETURN,$2,NULL,NULL,NULL);
         }
         ;
+
+BreakPointStmt: BRKP ';' {
+            $$ = createTree(0,NULL,TYPE_NULL,NULL,NODETYPE_BRKP,NULL,NULL,NULL,NULL);
+            }
+            ;
+
 DimDecl: '[' NUM ']' DimDecl {
                 $$ = addDimension($2->val,$2,$4);
             }
@@ -551,10 +565,13 @@ void yyerror(char *s) {
 
 void code_generate(){
     codegen_generate_header();
-    stack_top = nextBinding-1;
-    codegen_initialize_stack(stack_top);
+    stack_top = initialStackTop;
+    codegen_initialize_stack(initialStackTop);
+    fprintf(target_file,"MOV BP, 4095\n");
+    fprintf(target_file,"CALL F0\n");
+    fprintf(target_file,"JMP L_EXIT\n");
     codegen(head,-1,-1);
-    codegen_add_breakpoint();
+    fprintf(target_file,"L_EXIT:");
     codegen_call_exit();
 }
 
@@ -563,7 +580,7 @@ void free_memory(){
 }
 
 int main(){
-    yyin = fopen("../input.txt", "r");
+    yyin = fopen("../input.expl", "r");
     yyparse();
     printTree(head);
     target_file = fopen("../target_file.xsm","w");
