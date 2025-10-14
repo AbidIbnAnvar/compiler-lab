@@ -97,6 +97,7 @@ typedef struct dimNode
 typedef struct paramList
 {
     Type type;
+    Type basetype;
     char *name;
     struct paramList *next;
 } paramList;

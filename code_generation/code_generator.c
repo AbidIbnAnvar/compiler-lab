@@ -125,6 +125,14 @@ reg_index codegen(tnode *t, int startLabel, int endLabel)
         {
             r = codegen_function_call(t->left);
         }
+        else if (isAccessNode(t->left))
+        {
+            tnode *leftNode = t->left;
+            SymbolTable *st = leftNode->left->STentry;
+            r = codegen_read_from_stack(st->binding, st->scope);
+            codegen_read_from_stack_with_register(r);
+            free_register();
+        }
         codegen_print_register(r);
         return current_register;
     }
@@ -244,16 +252,22 @@ reg_index codegen_evaluate_expression(tnode *t)
     else if (isRefNode(t))
     {
         SymbolTable *st = t->left->STentry;
-        int binding = st->binding;
         reg_index r = get_register();
-        codegen_set_int_value_to_register(r, binding);
+        if (st->scope == GLOBAL)
+        {
+            codegen_set_int_value_to_register(r, st->binding);
+        }
+        else
+        {
+            fprintf(target_file, "MOV R%d, BP\n", r);
+            fprintf(target_file, "ADD R%d, %d\n", r, st->binding);
+        }
         return r;
     }
     else if (isAccessNode(t))
     {
         SymbolTable *st = t->left->STentry;
-        int binding = st->binding;
-        reg_index p = codegen_read_from_stack(binding, st->scope); // contains values' address
+        reg_index p = codegen_read_from_stack(st->binding, st->scope);
         codegen_read_from_stack_with_register(p);
         return p;
     }

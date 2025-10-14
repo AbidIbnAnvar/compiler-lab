@@ -24,7 +24,7 @@ void checkargs(argList *args, paramList *params, char *fname);
 void printParamList(paramList *p);
 char *getType(int type);
 void freeTable(SymbolTable *head);
-paramList *createParamList(Type type, char *name);
+paramList *createParamList(Type type, Type basetype, char *name);
 argList *createArgList(tnode *node);
 paramList *reverseParamList(paramList *head);
 argList *reverseArgList(argList *head);

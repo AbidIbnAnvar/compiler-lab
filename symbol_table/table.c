@@ -228,11 +228,12 @@ void freeTable(SymbolTable *head)
     }
 }
 
-paramList *createParamList(Type type, char *name)
+paramList *createParamList(Type type, Type basetype, char *name)
 {
     paramList *node = (paramList *)malloc(sizeof(paramList));
     node->name = strdup(name);
     node->type = type;
+    node->basetype = basetype;
     return node;
 }
 
@@ -309,6 +310,7 @@ SymbolTable *convertParamListToSymbolTable(paramList *plist)
         node->binding = nextBinding;
         nextBinding -= 1;
         node->flabel = -1;
+        node->scope = LOCAL;
         node->next = NULL;
         if (head == NULL)
         {

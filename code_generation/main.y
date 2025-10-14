@@ -135,6 +135,9 @@ Gid: ID {
     | ID '('ParamList')' {
         $$ = createEntry($1->varname,$1->type,1,currentFLabel++,GLOBAL,NULL,$3,NULL);
     }
+    | MUL ID '('ParamList')' {
+        $$ = createEntry($2->varname,$2->type,1,currentFLabel++,GLOBAL,NULL,$4,NULL);
+    }
     ;
 
 MainBlock: INT_TYPE MAIN '(' ')' {
@@ -172,7 +175,22 @@ FDef: Type ID '(' ParamList ')' {
         $$ = createTree(0,NULL,TYPE_NULL,$2->varname,NODETYPE_FUNC,$10,NULL,$11,NULL);
         $$->Lentry = sstop->symbolTable;
         popFromScopeStack(&sstop);
-    };
+    }
+    | Type MUL ID '(' ParamList ')' {
+            printf("%s()\n",$3->varname);
+            SymbolTable* st = lookupEntry($3->varname,sstop);
+            checkparams(st->paramList,$5,$3->varname);
+            nextBinding = -3;
+            SymbolTable* params = convertParamListToSymbolTable($5);
+            pushToScopeStack(params,&sstop);
+            nextBinding = 1;
+    }
+     '{' LDeclBlock BEGINSTMT Slist ReturnStmt ENDSTMT '}' {
+        $$ = createTree(0,NULL,TYPE_NULL,$3->varname,NODETYPE_FUNC,$11,NULL,$12,NULL);
+        $$->Lentry = sstop->symbolTable;
+        popFromScopeStack(&sstop);
+    }
+    ;
 
 ParamList: ParamList ',' Param {
             paramList* curr = $1;
@@ -191,7 +209,10 @@ ParamList: ParamList ',' Param {
         ;
 
 Param: Type ID {
-        $$ = createParamList($1,$2->varname);
+        $$ = createParamList($1,TYPE_NULL,$2->varname);
+    }
+    | Type MUL ID {
+        $$ = createParamList(TYPE_PTR,$1,$3->varname);
     }
     ;
 
@@ -283,11 +304,11 @@ VarList : VarList ',' ID {
             while(curr->next){
                 curr = curr->next;
             }
-            curr->next = createEntry($4->varname,TYPE_PTR,1,-1,LOCAL,NULL,NULL,NULL);
+            curr->next = createEntry($4->varname,TYPE_PTR,1,-1,GLOBAL,NULL,NULL,NULL);
             $$ = $1;
         }
         | MUL ID {
-            $$ = createEntry($2->varname,TYPE_PTR,1,-1,LOCAL,NULL,NULL,NULL);
+            $$ = createEntry($2->varname,TYPE_PTR,1,-1,GLOBAL,NULL,NULL,NULL);
         }
         ;
 
