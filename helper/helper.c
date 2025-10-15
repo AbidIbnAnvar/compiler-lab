@@ -122,6 +122,11 @@ bool isReturnNode(tnode *t)
     return t && t->nodetype == NODETYPE_RETURN;
 }
 
+bool isTupleAccessNode(tnode *t)
+{
+    return t && t->nodetype == NODETYPE_TUPLE_ACCESS;
+}
+
 bool matchesOperator(tnode *t, char *op)
 {
     return t && t->op && (strcmp(t->op, op) == 0);
@@ -143,7 +148,7 @@ void printArray(int arr[], int size)
 
 void printNode(tnode *t)
 {
-    printf("(%d,%s,%d,%d) \n", t->val, t->varname, t->type, t->nodetype);
+    printf("(%d,%s,%d,%d) \n", t->val, t->varname, t->typetable->type, t->nodetype);
 }
 
 void prefixprint(tnode *t)
@@ -187,6 +192,8 @@ const char *type_to_string(Type type)
         return "STRING";
     case TYPE_PTR:
         return "PTR";
+    case TYPE_TUPLE:
+        return "TUPLE";
     default:
         return "UNKNOWN";
     }
@@ -244,6 +251,8 @@ const char *nodetype_to_string(NodeType nodetype)
         return "RET";
     case NODETYPE_BRKP:
         return "BRKP";
+    case NODETYPE_TUPLE_ACCESS:
+        return "TUPLE_ACCESS";
     default:
         return "UNKNOWN";
     }

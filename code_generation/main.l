@@ -31,6 +31,7 @@ LETTER [a-zA-Z]
 "enddecl" {return ENDDECL;}
 "int" {return INT_TYPE;}
 "str" {return STR_TYPE;}
+"tuple" {return TUPLE_TYPE;}
 "return" {return RETURN;}
 "breakpoint" {return BRKP;}
 "begin" {return BEGINSTMT;}
@@ -52,17 +53,17 @@ LETTER [a-zA-Z]
 "&&" {return AND;}
 
 {DIGIT}+ {
-    yylval.node = createTree(atoi(yytext),"",TYPE_INT,NULL,NODETYPE_LEAF,NULL,NULL,NULL,NULL);
+    yylval.node = createTree(atoi(yytext),"",createTypeTable(TYPE_INT,TYPE_NULL,1,NULL),NULL,NODETYPE_LEAF,NULL,NULL,NULL,NULL);
     return NUM;
 }
 
-{LETTER}+{DIGIT}* {
-    yylval.node = createTree(0,NULL,TYPE_NULL,strdup(yytext),NODETYPE_LEAF,NULL,NULL,NULL,NULL);
+{LETTER}({LETTER}|{DIGIT}|"_")* {
+    yylval.node = createTree(0,NULL,createTypeTable(TYPE_NULL,TYPE_NULL,1,NULL),strdup(yytext),NODETYPE_LEAF,NULL,NULL,NULL,NULL);
     return ID;
 }
 
 \"[^"\n]*\" {
-    yylval.node = createTree(0,NULL,TYPE_STR,NULL,NODETYPE_LEAF,NULL,NULL,NULL,NULL);
+    yylval.node = createTree(0,NULL,createTypeTable(TYPE_NULL,TYPE_NULL,1,NULL),NULL,NODETYPE_LEAF,NULL,NULL,NULL,NULL);
     yylval.node->strval = strdup(yytext);
     return STR;
 }
@@ -75,6 +76,7 @@ LETTER [a-zA-Z]
 "[" {return '[';}
 "]" {return ']';}
 "&" {return '&';}
+"." {return '.';}
 
 
 "{" {return '{';}

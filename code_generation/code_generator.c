@@ -36,11 +36,12 @@ reg_index codegen(tnode *t, int startLabel, int endLabel)
     {
         if (isAssignmentNode(t))
         {
-            reg_index r = codegen_evaluate_expression(t->right);
+
             tnode *leftNode = t->left;
             // Assignment to array
             if (isArrayNode(leftNode))
             {
+                reg_index r = codegen_evaluate_expression(t->right);
                 reg_index binding = codegen_array(leftNode);
                 codegen_store_in_stack_with_registers(r, binding);
                 return current_register;
@@ -48,6 +49,7 @@ reg_index codegen(tnode *t, int startLabel, int endLabel)
             // Assignment to pointer
             else if (isAccessNode(leftNode))
             {
+                reg_index r = codegen_evaluate_expression(t->right);
                 SymbolTable *st = leftNode->left->STentry;
                 int binding = st->binding;
                 reg_index p = codegen_read_from_stack(binding, st->scope);
@@ -58,8 +60,47 @@ reg_index codegen(tnode *t, int startLabel, int endLabel)
             // Assignment to variable
             else
             {
-                SymbolTable *st = leftNode->STentry;
-                codegen_store_in_stack(r, st->binding, st->scope);
+                SymbolTable *st1 = leftNode->STentry;
+                SymbolTable *st2 = t->right->STentry;
+                // Assigning tuple to tuple
+                if (st1->typetable->field && st2->typetable->field)
+                {
+                    Field *f = st1->typetable->field;
+                    reg_index r0 = get_register();
+                    codegen_set_int_value_to_register(r0, st1->binding);
+                    reg_index r1 = get_register();
+                    codegen_set_int_value_to_register(r1, st2->binding);
+                    while (f)
+                    {
+                        fprintf(target_file, "MOV [R%d],[R%d]\n", r0, r1);
+                        fprintf(target_file, "ADD R%d,1\n", r0);
+                        fprintf(target_file, "ADD R%d,1\n", r1);
+                        f = f->next;
+                    }
+                    free_register();
+                }
+                // Assigning tuple's ptr value to tuple
+                else if (isAccessNode(t->right) && st2->typetable->size > 1)
+                {
+                    reg_index r = get_register();
+                    codegen_set_int_value_to_register(r, st1->binding);
+                    SymbolTable *st = t->right->left->STentry;
+                    reg_index ptr = codegen_read_from_stack(st->binding, st->scope);
+                    Field *f = st1->typetable->field;
+                    while (f)
+                    {
+                        fprintf(target_file, "MOV [R%d],[R%d]\n", r, ptr);
+                        fprintf(target_file, "ADD R%d,1\n", r);
+                        fprintf(target_file, "ADD R%d,1\n", ptr);
+                        f = f->next;
+                    }
+                    free_register();
+                }
+                else
+                {
+                    reg_index r = codegen_evaluate_expression(t->right);
+                    codegen_store_in_stack(r, st1->binding, st1->scope);
+                }
                 return current_register;
             }
         }
@@ -76,6 +117,28 @@ reg_index codegen(tnode *t, int startLabel, int endLabel)
         {
             tnode *arrayNode = t->left;
             reg_index r = codegen_array(arrayNode);
+            codegen_read_to_register(r);
+        }
+        if (isTupleAccessNode(t->left))
+        {
+            tnode *accessNode = t->left;
+            SymbolTable *st = accessNode->STentry;
+            reg_index r = get_register();
+            codegen_set_int_value_to_register(r, st->binding);
+            int offset = 0;
+            Field *f = st->typetable->field;
+            while (f)
+            {
+                if (strcmp(f->name, accessNode->varname) == 0)
+                {
+                    break;
+                }
+                offset++;
+                f = f->next;
+            }
+            reg_index off = get_register();
+            codegen_set_int_value_to_register(off, offset);
+            codegen_add_two_registers(r, off);
             codegen_read_to_register(r);
         }
         else
@@ -110,13 +173,13 @@ reg_index codegen(tnode *t, int startLabel, int endLabel)
             r = codegen_read_from_stack(offset, st->scope);
         }
         // number is put inside write
-        else if (isLeafNode(t->left) && t->left->type == TYPE_INT)
+        else if (isLeafNode(t->left) && t->left->typetable->type == TYPE_INT)
         {
             r = get_register();
             codegen_set_int_value_to_register(r, t->left->val);
         }
         // string is put inside write
-        else if (isLeafNode(t->left) && t->left->type == TYPE_STR)
+        else if (isLeafNode(t->left) && t->left->typetable->type == TYPE_STR)
         {
             r = get_register();
             codegen_set_str_value_to_register(r, t->left->strval);
@@ -132,6 +195,28 @@ reg_index codegen(tnode *t, int startLabel, int endLabel)
             r = codegen_read_from_stack(st->binding, st->scope);
             codegen_read_from_stack_with_register(r);
             free_register();
+        }
+        else if (isTupleAccessNode(t->left))
+        {
+            tnode *accessNode = t->left;
+            SymbolTable *st = accessNode->STentry;
+            r = get_register();
+            codegen_set_int_value_to_register(r, st->binding);
+            int offset = 0;
+            Field *f = st->typetable->field;
+            while (f)
+            {
+                if (strcmp(f->name, accessNode->varname) == 0)
+                {
+                    break;
+                }
+                offset++;
+                f = f->next;
+            }
+            reg_index off = get_register();
+            codegen_set_int_value_to_register(off, offset);
+            codegen_add_two_registers(r, off);
+            codegen_read_from_stack_with_register(r);
         }
         codegen_print_register(r);
         return current_register;
@@ -278,11 +363,11 @@ reg_index codegen_evaluate_expression(tnode *t)
         if (t->varname == NULL)
         {
             reg_index r = get_register();
-            if (t->type == TYPE_INT)
+            if (t->typetable->type == TYPE_INT)
             {
                 codegen_set_int_value_to_register(r, t->val);
             }
-            else if (t->type == TYPE_STR && t->strval != NULL)
+            else if (t->typetable->type == TYPE_STR && t->strval != NULL)
             {
                 codegen_set_str_value_to_register(r, t->strval);
             }
@@ -305,6 +390,29 @@ reg_index codegen_evaluate_expression(tnode *t)
     else if (isFuncCallNode(t))
     {
         reg_index r = codegen_function_call(t);
+        return current_register;
+    }
+    else if (isTupleAccessNode(t))
+    {
+        tnode *accessNode = t;
+        SymbolTable *st = accessNode->STentry;
+        reg_index r = get_register();
+        codegen_set_int_value_to_register(r, st->binding);
+        int offset = 0;
+        Field *f = st->typetable->field;
+        while (f)
+        {
+            if (strcmp(f->name, accessNode->varname) == 0)
+            {
+                break;
+            }
+            offset++;
+            f = f->next;
+        }
+        reg_index off = get_register();
+        codegen_set_int_value_to_register(off, offset);
+        codegen_add_two_registers(r, off);
+        codegen_read_from_stack_with_register(r);
         return current_register;
     }
 
@@ -388,9 +496,15 @@ reg_index codegen_function(tnode *t)
         }
         local = local->next;
     }
-    fprintf(target_file, "ADD SP, %d\n", total_size);
+    if (total_size > 0)
+    {
+        fprintf(target_file, "ADD SP, %d\n", total_size);
+    }
     codegen(t->left, -1, -1);
-    fprintf(target_file, "SUB SP, %d\n", total_size);
+    if (total_size > 0)
+    {
+        fprintf(target_file, "SUB SP, %d\n", total_size);
+    }
 
     // Return
     // Setting return value
@@ -483,9 +597,15 @@ reg_index codegen_main_function(tnode *t)
         }
         local = local->next;
     }
-    fprintf(target_file, "ADD SP, %d\n", total_size);
+    if (total_size > 0)
+    {
+        fprintf(target_file, "ADD SP, %d\n", total_size);
+    }
     codegen(t->left, -1, -1);
-    fprintf(target_file, "SUB SP, %d\n", total_size);
+    if (total_size > 0)
+    {
+        fprintf(target_file, "SUB SP, %d\n", total_size);
+    }
 
     // Restoring old BP value
     fprintf(target_file, "POP BP\n");

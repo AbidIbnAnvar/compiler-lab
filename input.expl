@@ -1,32 +1,32 @@
 decl
     int *p, *q;
-    int* swap(int* a, int* b);
+    tuple student(
+        str name, 
+        int roll_no
+    ) a, b, c, *ptr;
+    int abc;
 enddecl
-
-int* swap(int* a, int* b){
-    decl
-        int temp;
-    enddecl
-    begin
-        breakpoint;
-        return a;
-    end
-}
 
 int main() {
     decl
-        int a,b;
+        tuple avatar(
+            str name, 
+            int damage
+        ) m,n;
     enddecl
+
     begin
-        read(a);
-        read(b);
-        p = &a;
-        q = &b;
-        print(*p);
-        print(*q);
-        q = swap(p,q);
-        print(*p);
-        print(*q);
+        read(a.name);
+        read(a.roll_no);
+        print(a.name);
+        print(a.roll_no);
+        ptr = &a;
+        b = a;
+        print(b.name);
+        print(b.roll_no);
+        c = *ptr;
+        print(c.name);
+        print(c.roll_no);
         return 0;
     end
 }

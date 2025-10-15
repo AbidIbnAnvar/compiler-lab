@@ -82,11 +82,12 @@ extern int yydebug;
     ENDDECL = 288,
     INT_TYPE = 289,
     STR_TYPE = 290,
-    MAIN = 291,
-    RETURN = 292,
-    BRKP = 293,
-    BEGINSTMT = 294,
-    ENDSTMT = 295
+    TUPLE_TYPE = 291,
+    MAIN = 292,
+    RETURN = 293,
+    BRKP = 294,
+    BEGINSTMT = 295,
+    ENDSTMT = 296
   };
 #endif
 /* Tokens.  */
@@ -123,11 +124,12 @@ extern int yydebug;
 #define ENDDECL 288
 #define INT_TYPE 289
 #define STR_TYPE 290
-#define MAIN 291
-#define RETURN 292
-#define BRKP 293
-#define BEGINSTMT 294
-#define ENDSTMT 295
+#define TUPLE_TYPE 291
+#define MAIN 292
+#define RETURN 293
+#define BRKP 294
+#define BEGINSTMT 295
+#define ENDSTMT 296
 
 /* Value type.  */
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
@@ -137,12 +139,12 @@ union YYSTYPE
 
     struct tnode* node;
     struct SymbolTable* symbolTable;
-    int var_type;
+    struct TypeTable* typetable;
     struct dimNode* dim;
     struct paramList* params;
     struct argList* args;
 
-#line 146 "y.tab.h"
+#line 148 "y.tab.h"
 
 };
 typedef union YYSTYPE YYSTYPE;

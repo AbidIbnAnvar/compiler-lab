@@ -5,11 +5,11 @@ int nextBinding = 4096;
 int initialStackTop = 4095;
 int currentFLabel = 1;
 
-SymbolTable *createEntry(char *name, int type, int size, int flabel, Scope scope, dimNode *dimNode, paramList *paramList, SymbolTable *next)
+SymbolTable *createEntry(char *name, TypeTable *typetable, int size, int flabel, Scope scope, dimNode *dimNode, paramList *paramList, SymbolTable *next)
 {
     SymbolTable *entry = (SymbolTable *)malloc(sizeof(SymbolTable));
     entry->name = name;
-    entry->type = type;
+    entry->typetable = typetable;
     if (flabel == -1)
     {
         entry->size = size;
@@ -66,12 +66,12 @@ SymbolTable *lookupSymbolTable(char *name, SymbolTable *head)
     return NULL;
 }
 
-void createAndAppendEntry(char *name, int type, int size, int flabel, Scope scope)
+void createAndAppendEntry(char *name, TypeTable *typetable, int size, int flabel, Scope scope)
 {
     if (!sstop)
     {
         sstop = (scopeStack *)malloc(sizeof(scopeStack));
-        sstop->symbolTable = createEntry(name, type, size, flabel, scope, NULL, NULL, NULL);
+        sstop->symbolTable = createEntry(name, typetable, size, flabel, scope, NULL, NULL, NULL);
         sstop->prev = NULL;
         sstop->next = NULL;
         return;
@@ -79,7 +79,7 @@ void createAndAppendEntry(char *name, int type, int size, int flabel, Scope scop
     SymbolTable *curr = sstop->symbolTable;
     if (curr == NULL)
     {
-        sstop->symbolTable = createEntry(name, type, size, flabel, scope, NULL, NULL, NULL);
+        sstop->symbolTable = createEntry(name, typetable, size, flabel, scope, NULL, NULL, NULL);
     }
     else
     {
@@ -92,7 +92,7 @@ void createAndAppendEntry(char *name, int type, int size, int flabel, Scope scop
             }
             curr = curr->next;
         }
-        curr->next = createEntry(name, type, size, flabel, scope, NULL, NULL, NULL);
+        curr->next = createEntry(name, typetable, size, flabel, scope, NULL, NULL, NULL);
     }
 }
 
@@ -130,7 +130,7 @@ void checkparams(paramList *decl, paramList *def, char *fname)
 {
     while (decl && def)
     {
-        if (decl->type != def->type)
+        if (decl->typetable->type != def->typetable->type)
         {
             fprintf(stderr, "Error: Invalid Parameter for %s()\n", fname);
             exit(1);
@@ -149,7 +149,7 @@ void checkargs(argList *args, paramList *params, char *fname)
 {
     while (args && params)
     {
-        if (args->node->type != params->type)
+        if (args->node->typetable->type != params->typetable->type)
         {
             fprintf(stderr, "Error: Invalid Argument for %s()\n", fname);
             exit(1);
@@ -175,7 +175,17 @@ void showTable(SymbolTable *st)
     {
         // Adjust field widths as needed for your actual data
         printf("| %-14s | %-6s | %-6s | %-4d | %-7d | %-6d | %-6s |\n",
-               curr->name, getType(curr->type), getType(curr->vartype), curr->size, curr->binding, curr->flabel, (curr->scope == LOCAL ? "Local" : "Global"));
+               curr->name, getType(curr->typetable->type), getType(curr->typetable->base), curr->size, curr->binding, curr->flabel, (curr->scope == LOCAL ? "Local" : "Global"));
+
+        Field *f = curr->typetable->field;
+        int index = 0;
+        while (f != NULL)
+        {
+            printf("| └─ %-11.11s | %-6s | %-6s | %-4d | └─ %-4d | %-6d | %-6s |\n",
+                   f->name, getType(f->typetable->type), getType(f->typetable->base), 1, curr->binding + index++, -1, (curr->scope == LOCAL ? "Local" : "Global"));
+            f = f->next;
+        }
+
         curr = curr->next;
     }
 
@@ -192,7 +202,7 @@ void printParamList(paramList *p)
     {
         // Adjust field widths as needed for your actual data
         printf("| %-14s | %-6s |\n",
-               curr->name, getType(curr->type));
+               curr->name, getType(curr->typetable->type));
         curr = curr->next;
     }
     printf("+----------------+--------+\n");
@@ -210,6 +220,8 @@ char *getType(int type)
         return "bool";
     case TYPE_PTR:
         return "ptr";
+    case TYPE_TUPLE:
+        return "tuple";
     default:
         return "-";
     }
@@ -228,12 +240,11 @@ void freeTable(SymbolTable *head)
     }
 }
 
-paramList *createParamList(Type type, Type basetype, char *name)
+paramList *createParamList(TypeTable *typetable, char *name)
 {
     paramList *node = (paramList *)malloc(sizeof(paramList));
-    node->name = strdup(name);
-    node->type = type;
-    node->basetype = basetype;
+    node->name = name;
+    node->typetable = typetable;
     return node;
 }
 
@@ -256,6 +267,25 @@ paramList *reverseParamList(paramList *head)
         curr = next;
     }
     return prev;
+}
+
+Field *createField(TypeTable *typetable, char *name)
+{
+    Field *node = (Field *)malloc(sizeof(Field));
+    node->name = name;
+    node->typetable = typetable;
+    node->next = NULL;
+    return node;
+}
+// TODO: Add size to type table
+TypeTable *createTypeTable(Type type, Type base, int size, Field *field)
+{
+    TypeTable *node = (TypeTable *)malloc(sizeof(TypeTable));
+    node->type = type;
+    node->base = base;
+    node->size = size;
+    node->field = field;
+    return node;
 }
 
 argList *reverseArgList(argList *head)
@@ -298,14 +328,14 @@ SymbolTable *convertParamListToSymbolTable(paramList *plist)
     SymbolTable *curr = NULL;
     while (plist)
     {
-        if (exists(head, plist->name))
+        if (existsInSymbolTable(head, plist->name))
         {
             fprintf(stderr, "Error: Duplicate parameter name '%s'\n", plist->name);
             exit(1);
         }
         SymbolTable *node = (SymbolTable *)malloc(sizeof(SymbolTable));
         node->name = plist->name;
-        node->type = plist->type;
+        node->typetable = plist->typetable;
         node->size = 1;
         node->binding = nextBinding;
         nextBinding -= 1;
@@ -326,7 +356,62 @@ SymbolTable *convertParamListToSymbolTable(paramList *plist)
     return head;
 }
 
-int exists(SymbolTable *head, char *name)
+Field *convertToField(paramList *p)
+{
+    if (!p)
+        return NULL;
+
+    Field *head = NULL;
+    Field *curr = NULL;
+    while (p)
+    {
+        if (existsInParamList(head, p->name))
+        {
+            fprintf(stderr, "Error: Duplicate parameter name '%s'\n", p->name);
+            exit(1);
+        }
+        Field *node = createField(p->typetable, p->name);
+        if (head == NULL)
+        {
+            head = node;
+        }
+        else
+        {
+            curr->next = node;
+        }
+        curr = node;
+        p = p->next;
+    }
+    return head;
+}
+
+TypeTable *getFieldType(Field *field, char *name)
+{
+    Field *curr = field;
+    while (curr)
+    {
+        if (strcmp(curr->name, name) == 0)
+        {
+            return curr->typetable;
+        }
+        curr = curr->next;
+    }
+    fprintf(stderr, "Error: Field %s not found\n", name);
+    exit(1);
+}
+
+int existsInSymbolTable(SymbolTable *head, char *name)
+{
+    while (head)
+    {
+        if (strcmp(head->name, name) == 0)
+            return 1;
+        head = head->next;
+    }
+    return 0;
+}
+
+int existsInParamList(Field *head, char *name)
 {
     while (head)
     {

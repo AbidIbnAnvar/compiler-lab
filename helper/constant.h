@@ -9,7 +9,8 @@ typedef enum Type
     TYPE_BOOL,
     TYPE_INT,
     TYPE_STR,
-    TYPE_PTR
+    TYPE_PTR,
+    TYPE_TUPLE
 } Type;
 
 typedef enum NodeType
@@ -37,7 +38,8 @@ typedef enum NodeType
     NODETYPE_FUNC,
     NODETYPE_FUNC_CALL,
     NODETYPE_RETURN,
-    NODETYPE_BRKP
+    NODETYPE_BRKP,
+    NODETYPE_TUPLE_ACCESS
 } NodeType;
 
 typedef enum Scope
@@ -52,11 +54,26 @@ union constant
     char *strval;
 };
 
+typedef struct TypeTable
+{
+    Type type; // variable's type
+    Type base; // variable's base type (for pointers)
+    int size;
+    struct Field *field;
+} TypeTable;
+
+typedef struct Field
+{
+    char *name;
+    TypeTable *typetable;
+    struct Field *next;
+} Field;
+
 typedef struct tnode
 {
     int val;                     // for num
     char *strval;                // for str
-    Type type;                   // value type
+    TypeTable *typetable;        // value type
     char *op;                    // operator symbol (for arithmetic operations)
     char *varname;               // variable name
     NodeType nodetype;           // to know info about node
@@ -70,8 +87,7 @@ typedef struct tnode
 typedef struct SymbolTable
 {
     char *name;                  // variable name
-    Type type;                   // variable type
-    int vartype;                 // variable's base type (for pointers)
+    TypeTable *typetable;        // variable type
     int size;                    // variable size
     int binding;                 // variable binding in stack
     int flabel;                  // function's label
@@ -96,8 +112,7 @@ typedef struct dimNode
 
 typedef struct paramList
 {
-    Type type;
-    Type basetype;
+    TypeTable *typetable;
     char *name;
     struct paramList *next;
 } paramList;

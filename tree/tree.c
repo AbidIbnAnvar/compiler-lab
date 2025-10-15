@@ -1,11 +1,11 @@
 #include "tree.h"
 #include "../helper/helper.h"
 
-tnode *createTree(int val, char *op, Type type, char *varname, NodeType nodetype, tnode *l, tnode *m, tnode *r, SymbolTable *STentry)
+tnode *createTree(int val, char *op, TypeTable *typetable, char *varname, NodeType nodetype, tnode *l, tnode *m, tnode *r, SymbolTable *STentry)
 {
     if (nodetype == NODETYPE_OP_ASSIGNMENT)
     {
-        if (type == TYPE_PTR)
+        if (typetable->type == TYPE_PTR)
         {
             // if(r->nodetype!=NODETYPE_REF){
             //     fprintf();
@@ -14,12 +14,12 @@ tnode *createTree(int val, char *op, Type type, char *varname, NodeType nodetype
     }
     else if (nodetype == NODETYPE_OP_ARITHMETIC)
     {
-        if (l->type == TYPE_STR || r->type == TYPE_STR)
+        if (l->typetable->type == TYPE_STR || r->typetable->type == TYPE_STR)
         {
             fprintf(stderr, "Error: Type Mismatch. Expected Integer\n");
             exit(1);
         }
-        else if (strcmp(op, "+") == 0 && ((l->type != TYPE_INT && l->nodetype != NODETYPE_ACCESS) || (r->type != TYPE_INT && r->nodetype != NODETYPE_ACCESS)))
+        else if (strcmp(op, "+") == 0 && ((l->typetable->type != TYPE_INT && l->nodetype != NODETYPE_ACCESS) || (r->typetable->type != TYPE_INT && r->nodetype != NODETYPE_ACCESS)))
         {
             fprintf(stderr, "Error: Type Mismatch. Expected Integer\n");
             exit(1);
@@ -27,7 +27,7 @@ tnode *createTree(int val, char *op, Type type, char *varname, NodeType nodetype
     }
     else if (nodetype == NODETYPE_WHILE)
     {
-        if (l->type != TYPE_INT)
+        if (l->typetable->type != TYPE_INT)
         {
             fprintf(stderr, "Error: Type Mismatch. Expected Integer\n");
             printNode(l);
@@ -36,7 +36,7 @@ tnode *createTree(int val, char *op, Type type, char *varname, NodeType nodetype
     }
     else if (nodetype == NODETYPE_IF)
     {
-        if (l->type != TYPE_INT)
+        if (l->typetable->type != TYPE_INT)
         {
             fprintf(stderr, "Error: Type Mismatch. Expected Integer\n");
             printNode(l);
@@ -45,7 +45,7 @@ tnode *createTree(int val, char *op, Type type, char *varname, NodeType nodetype
     }
     tnode *tree = (tnode *)malloc(sizeof(tnode));
     tree->val = val;
-    tree->type = type;
+    tree->typetable = typetable;
     tree->op = op;
     tree->varname = varname;
     tree->nodetype = nodetype;
@@ -60,7 +60,7 @@ tnode *createTree(int val, char *op, Type type, char *varname, NodeType nodetype
 
 void print_tree_structure(tnode *root, char *prefix, int is_last, int is_root)
 {
-    if (root == NULL)
+    if (!root)
         return;
 
     // Print current node with connection lines
@@ -76,12 +76,20 @@ void print_tree_structure(tnode *root, char *prefix, int is_last, int is_root)
         printf("name:%s ", root->varname);
     if (root->op)
         printf("op:%s ", root->op);
-    printf("type:%s ", type_to_string(root->type));
-    if (root->type == TYPE_INT)
+
+    if (root->typetable)
+    {
+        printf("type:%s ", type_to_string(root->typetable->type));
+        if (root->typetable->type == TYPE_PTR)
+        {
+            printf("refsize:%d ", root->typetable->size);
+        }
+    }
+    if (root->typetable && root->typetable->type == TYPE_INT)
     {
         printf("val:%d ", root->val);
     }
-    if (root->type == TYPE_STR)
+    if (root->typetable && root->typetable->type == TYPE_STR)
     {
         printf("val:%s ", root->strval);
     }
