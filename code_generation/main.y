@@ -87,8 +87,10 @@ GDeclBlock: DECL GDeclList ENDDECL {
                         curr->size = size;
                         SymbolTable* temp = curr->next;
                         while(temp){
-                            temp->binding = temp->binding + (size-1);
-                            initialStackTop = max(initialStackTop,temp->binding+temp->size-1);
+                            if(temp->flabel==-1){
+                                temp->binding = temp->binding + (size-1);
+                                initialStackTop = max(initialStackTop,temp->binding+temp->size-1);
+                            }
                             temp = temp->next;
                         }
                     }
@@ -186,7 +188,6 @@ FDefBlock: FDefBlock FDef {
 FDef: Type ID '(' ParamList ')' {
             printf("%s()\n",$2->varname);
             SymbolTable* st = lookupEntry($2->varname,sstop);
-            // printParamList($4);
             checkparams(st->paramList,$4,$2->varname);
             nextBinding = -3;
             SymbolTable* params = convertParamListToSymbolTable($4);
@@ -194,7 +195,7 @@ FDef: Type ID '(' ParamList ')' {
             nextBinding = 1;
     }
      '{' LDeclBlock BEGINSTMT Slist ReturnStmt ENDSTMT '}' {
-        $$ = createTree(0,NULL,TYPE_NULL,$2->varname,NODETYPE_FUNC,$10,NULL,$11,NULL);
+        $$ = createTree(0,NULL,$1,$2->varname,NODETYPE_FUNC,$10,NULL,$11,NULL);
         $$->Lentry = sstop->symbolTable;
         popFromScopeStack(&sstop);
     }
@@ -208,7 +209,7 @@ FDef: Type ID '(' ParamList ')' {
             nextBinding = 1;
     }
      '{' LDeclBlock BEGINSTMT Slist ReturnStmt ENDSTMT '}' {
-        $$ = createTree(0,NULL,TYPE_NULL,$3->varname,NODETYPE_FUNC,$11,NULL,$12,NULL);
+        $$ = createTree(0,NULL,createTypeTable(TYPE_PTR,$1->type,1,NULL),$3->varname,NODETYPE_FUNC,$11,NULL,$12,NULL);
         $$->Lentry = sstop->symbolTable;
         popFromScopeStack(&sstop);
     }
@@ -266,6 +267,26 @@ LDeclBlock: DECL LDecList ENDDECL {
                     curr = curr->next;
                 }
                 curr->next = $2;
+            }
+            SymbolTable* curr = $2;
+            while(curr){
+                if(curr->typetable->field){
+                    int size = 0;
+                    Field* f = curr->typetable->field;
+                    while(f){
+                        size++;
+                        f = f->next;
+                    }
+                    curr->size = size;
+                    SymbolTable* temp = curr->next;
+                    while(temp){
+                        if(temp->flabel==-1){
+                            temp->binding = temp->binding + (size-1);
+                        }
+                        temp = temp->next;
+                    }
+                }
+                curr = curr->next;
             }
             showTable(sstop->symbolTable);
         } 
@@ -435,7 +456,7 @@ AsgStmt : ID '=' expr ';' {
             SymbolTable* st = lookupEntry($1->varname,sstop);
             $1->STentry = st;
             $1->typetable = st->typetable;
-            if($1->typetable->type != $3->typetable->type){
+            if(($1->typetable->type != $3->typetable->type)&&($1->typetable->type!=TYPE_PTR)){
                 fprintf(stderr,"Error: Trying to assign %s to %s\n",getType($3->typetable->type),getType($1->typetable->type));
                 yyerror("");
                 exit(1);
@@ -466,6 +487,12 @@ AsgStmt : ID '=' expr ';' {
             }
             tnode* left = createTree(0,"*",st->typetable,NULL,NODETYPE_ACCESS,$2,NULL,NULL,NULL);
             $$ = createTree(0,"=",st->typetable,NULL,NODETYPE_OP_ASSIGNMENT,left,NULL,$4,NULL);
+        }
+        | ID '.' ID '=' expr ';' {
+            SymbolTable* st = lookupEntry($1->varname,sstop);
+            TypeTable* fieldType = getFieldType(st->typetable->field,$3->varname);
+            tnode* left = createTree(0,NULL,fieldType,$3->varname,NODETYPE_TUPLE_ACCESS,NULL,NULL,NULL,st);
+            $$ = createTree(0,"=",fieldType,NULL,NODETYPE_OP_ASSIGNMENT,left,NULL,$5,NULL);
         }
         ;
 
@@ -502,7 +529,7 @@ FunctionCallStmt: ID '(' ArgList ')' ';' {
                     SymbolTable* st = lookupEntry($1->varname,sstop);
                     checkargs($3,st->paramList,$1->varname);
                     $1->STentry = st;
-                    $$ = createTree(0,NULL,st->typetable,$1->varname,NODETYPE_FUNC_CALL,NULL,NULL,NULL,NULL);
+                    $$ = createTree(0,NULL,st->typetable,$1->varname,NODETYPE_FUNC_CALL,NULL,NULL,NULL,st);
                     $$->argList = $3;
                 }
                 | ID '('')'';' {
@@ -670,10 +697,10 @@ void code_generate(){
     stack_top = initialStackTop;
     codegen_initialize_stack(initialStackTop);
     fprintf(target_file,"MOV BP, 4095\n");
-    fprintf(target_file,"CALL F0\n");
     fprintf(target_file,"JMP L_EXIT\n");
     codegen(head,-1,-1);
     fprintf(target_file,"L_EXIT:");
+    fprintf(target_file,"CALL F0\n");
     codegen_call_exit();
 }
 

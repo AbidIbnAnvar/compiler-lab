@@ -36,7 +36,6 @@ reg_index codegen(tnode *t, int startLabel, int endLabel)
     {
         if (isAssignmentNode(t))
         {
-
             tnode *leftNode = t->left;
             // Assignment to array
             if (isArrayNode(leftNode))
@@ -62,14 +61,36 @@ reg_index codegen(tnode *t, int startLabel, int endLabel)
             {
                 SymbolTable *st1 = leftNode->STentry;
                 SymbolTable *st2 = t->right->STentry;
+                // Assigning function
+                if (t->right->nodetype == NODETYPE_FUNC_CALL)
+                {
+                    reg_index r = codegen_evaluate_expression(t->right);
+                    codegen_store_in_stack(r, st1->binding, st1->scope);
+                }
                 // Assigning tuple to tuple
-                if (st1->typetable->field && st2->typetable->field)
+                else if (st1->typetable->field && st2->typetable->field)
                 {
                     Field *f = st1->typetable->field;
                     reg_index r0 = get_register();
-                    codegen_set_int_value_to_register(r0, st1->binding);
+                    if (st1->scope == GLOBAL)
+                    {
+                        codegen_set_int_value_to_register(r0, st1->binding);
+                    }
+                    else
+                    {
+                        fprintf(target_file, "MOV R%d, BP\n", r0);
+                        fprintf(target_file, "ADD R%d, %d\n", r0, st1->binding);
+                    }
                     reg_index r1 = get_register();
-                    codegen_set_int_value_to_register(r1, st2->binding);
+                    if (st2->scope == GLOBAL)
+                    {
+                        codegen_set_int_value_to_register(r1, st2->binding);
+                    }
+                    else
+                    {
+                        fprintf(target_file, "MOV R%d, BP\n", r1);
+                        fprintf(target_file, "ADD R%d, %d\n", r1, st2->binding);
+                    }
                     while (f)
                     {
                         fprintf(target_file, "MOV [R%d],[R%d]\n", r0, r1);
@@ -83,7 +104,15 @@ reg_index codegen(tnode *t, int startLabel, int endLabel)
                 else if (isAccessNode(t->right) && st2->typetable->size > 1)
                 {
                     reg_index r = get_register();
-                    codegen_set_int_value_to_register(r, st1->binding);
+                    if (st1->scope == GLOBAL)
+                    {
+                        codegen_set_int_value_to_register(r, st1->binding);
+                    }
+                    else
+                    {
+                        fprintf(target_file, "MOV R%d, BP\n", r);
+                        fprintf(target_file, "ADD R%d, %d\n", r, st1->binding);
+                    }
                     SymbolTable *st = t->right->left->STentry;
                     reg_index ptr = codegen_read_from_stack(st->binding, st->scope);
                     Field *f = st1->typetable->field;
@@ -98,8 +127,19 @@ reg_index codegen(tnode *t, int startLabel, int endLabel)
                 }
                 else
                 {
+                    int offset = 0;
+                    Field *f = st1->typetable->field;
+                    while (f)
+                    {
+                        if (strcmp(t->left->varname, f->name) == 0)
+                        {
+                            break;
+                        }
+                        offset++;
+                        f = f->next;
+                    }
                     reg_index r = codegen_evaluate_expression(t->right);
-                    codegen_store_in_stack(r, st1->binding, st1->scope);
+                    codegen_store_in_stack(r, st1->binding + offset, st1->scope);
                 }
                 return current_register;
             }
@@ -119,7 +159,7 @@ reg_index codegen(tnode *t, int startLabel, int endLabel)
             reg_index r = codegen_array(arrayNode);
             codegen_read_to_register(r);
         }
-        if (isTupleAccessNode(t->left))
+        else if (isTupleAccessNode(t->left))
         {
             tnode *accessNode = t->left;
             SymbolTable *st = accessNode->STentry;
@@ -397,7 +437,15 @@ reg_index codegen_evaluate_expression(tnode *t)
         tnode *accessNode = t;
         SymbolTable *st = accessNode->STentry;
         reg_index r = get_register();
-        codegen_set_int_value_to_register(r, st->binding);
+        if (st->scope == GLOBAL)
+        {
+            codegen_set_int_value_to_register(r, st->binding);
+        }
+        else
+        {
+            fprintf(target_file, "MOV R%d, BP\n", r);
+            fprintf(target_file, "ADD R%d, %d\n", r, st->binding);
+        }
         int offset = 0;
         Field *f = st->typetable->field;
         while (f)
@@ -541,24 +589,56 @@ reg_index codegen_function_call(tnode *t)
         argList *curr = t->argList;
         while (curr)
         {
-            reg_index r = codegen_evaluate_expression(curr->node);
-            codegen_push_register(r);
+            if (curr->node->typetable->type == TYPE_TUPLE)
+            {
+                int size = 0;
+                SymbolTable *st = curr->node->STentry;
+                reg_index r = get_register();
+                while (size < curr->node->typetable->size)
+                {
+                    fprintf(target_file, "MOV R%d,[%d]\n", r, st->binding + size);
+                    codegen_push_register(r);
+                    size++;
+                }
+            }
+            else
+            {
+                reg_index r = codegen_evaluate_expression(curr->node);
+                codegen_push_register(r);
+            }
             free_register();
             curr = curr->next;
         }
         t->argList = reverseArgList(t->argList);
     }
 
+    SymbolTable *function_st = t->STentry;
+    for (int i = 0; i < function_st->typetable->size; i++)
+    {
+        codegen_push_register(0);
+    }
     // Push empty space for return value
-    codegen_push_register(0);
     fprintf(target_file, "CALL F%d\n", st->flabel);
-    codegen_pop_register(push_count == 0 ? 1 : push_count);
+    for (int i = 0; i < function_st->typetable->size; i++)
+    {
+        codegen_pop_register(push_count == 0 ? 1 : push_count);
+    }
     if (t->argList)
     {
         argList *curr = t->argList;
         while (curr)
         {
-            codegen_pop_register(0);
+            if (curr->node->typetable->type == TYPE_TUPLE)
+            {
+                for (int i = 0; i < curr->node->typetable->size; i++)
+                {
+                    codegen_pop_register(0);
+                }
+            }
+            else
+            {
+                codegen_pop_register(0);
+            }
             curr = curr->next;
         }
     }

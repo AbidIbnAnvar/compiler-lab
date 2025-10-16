@@ -63,7 +63,7 @@ LETTER [a-zA-Z]
 }
 
 \"[^"\n]*\" {
-    yylval.node = createTree(0,NULL,createTypeTable(TYPE_NULL,TYPE_NULL,1,NULL),NULL,NODETYPE_LEAF,NULL,NULL,NULL,NULL);
+    yylval.node = createTree(0,NULL,createTypeTable(TYPE_STR,TYPE_NULL,1,NULL),NULL,NODETYPE_LEAF,NULL,NULL,NULL,NULL);
     yylval.node->strval = strdup(yytext);
     return STR;
 }

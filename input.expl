@@ -5,28 +5,59 @@ decl
         int roll_no
     ) a, b, c, *ptr;
     int abc;
+    str getName(tuple student(str name, int roll_no) *s);
+    int getRollNo(tuple student(str name, int roll_no) s);
+    int add(tuple student(str name, int roll_no) s,tuple student(str name, int roll_no)t);
+    tuple student(str name, int roll_no) getCopy(tuple student(str name, int roll_no) a);
+    int arr[20];
 enddecl
 
-int main() {
+str getName(tuple student(str name, int roll_no) *s)
+{
     decl
-        tuple avatar(
-            str name, 
-            int damage
-        ) m,n;
+        str name;
+        tuple student(str name, int roll_no) a;
     enddecl
+    begin
+        a = *s;
+        name = a.name;
+        return name;
+    end
+}
 
+int getRollNo(tuple student(str name, int roll_no) s)
+{
+    decl
+        int rollNo;
+    enddecl
+    begin
+        rollNo = s.roll_no;
+        return rollNo;
+    end
+}
+
+int add(tuple student(str name, int roll_no) s,tuple student(str name, int roll_no) t)
+{
+    decl
+        int sum;
+    enddecl
+    begin
+        sum = s.roll_no + t.roll_no;
+        return sum;
+    end
+}
+
+int main() {
     begin
         read(a.name);
         read(a.roll_no);
-        print(a.name);
-        print(a.roll_no);
-        ptr = &a;
-        b = a;
-        print(b.name);
-        print(b.roll_no);
-        c = *ptr;
-        print(c.name);
-        print(c.roll_no);
+        read(b.name);
+        read(b.roll_no);
+        print(getName(&a));
+        print(getRollNo(a));
+        print(getName(&b));
+        print(getRollNo(b));
+        print(add(a,b));
         return 0;
     end
 }

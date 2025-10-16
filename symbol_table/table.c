@@ -175,7 +175,7 @@ void showTable(SymbolTable *st)
     {
         // Adjust field widths as needed for your actual data
         printf("| %-14s | %-6s | %-6s | %-4d | %-7d | %-6d | %-6s |\n",
-               curr->name, getType(curr->typetable->type), getType(curr->typetable->base), curr->size, curr->binding, curr->flabel, (curr->scope == LOCAL ? "Local" : "Global"));
+               curr->name, getType(curr->typetable->type), getType(curr->typetable->base), curr->typetable->size, curr->binding, curr->flabel, (curr->scope == LOCAL ? "Local" : "Global"));
 
         Field *f = curr->typetable->field;
         int index = 0;
@@ -336,9 +336,18 @@ SymbolTable *convertParamListToSymbolTable(paramList *plist)
         SymbolTable *node = (SymbolTable *)malloc(sizeof(SymbolTable));
         node->name = plist->name;
         node->typetable = plist->typetable;
-        node->size = 1;
-        node->binding = nextBinding;
-        nextBinding -= 1;
+        if (node->typetable->type == TYPE_TUPLE)
+        {
+            node->size = node->typetable->size;
+            node->binding = nextBinding - (node->size - 1);
+            nextBinding = node->binding - 1;
+        }
+        else
+        {
+            node->size = 1;
+            node->binding = nextBinding;
+            nextBinding -= 1;
+        }
         node->flabel = -1;
         node->scope = LOCAL;
         node->next = NULL;

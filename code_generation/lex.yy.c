@@ -1041,7 +1041,7 @@ case 39:
 YY_RULE_SETUP
 #line 65 "main.l"
 {
-    yylval.node = createTree(0,NULL,createTypeTable(TYPE_NULL,TYPE_NULL,1,NULL),NULL,NODETYPE_LEAF,NULL,NULL,NULL,NULL);
+    yylval.node = createTree(0,NULL,createTypeTable(TYPE_STR,TYPE_NULL,1,NULL),NULL,NODETYPE_LEAF,NULL,NULL,NULL,NULL);
     yylval.node->strval = strdup(yytext);
     return STR;
 }

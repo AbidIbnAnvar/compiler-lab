@@ -19,7 +19,7 @@ tnode *createTree(int val, char *op, TypeTable *typetable, char *varname, NodeTy
             fprintf(stderr, "Error: Type Mismatch. Expected Integer\n");
             exit(1);
         }
-        else if (strcmp(op, "+") == 0 && ((l->typetable->type != TYPE_INT && l->nodetype != NODETYPE_ACCESS) || (r->typetable->type != TYPE_INT && r->nodetype != NODETYPE_ACCESS)))
+        else if (strcmp(op, "+") == 0 && ((l->typetable->type != TYPE_INT && l->nodetype != NODETYPE_ACCESS && l->typetable->type != TYPE_PTR && l->nodetype != NODETYPE_TUPLE_ACCESS) || (r->typetable->type != TYPE_INT && r->nodetype != NODETYPE_ACCESS && r->typetable->type != TYPE_PTR && r->nodetype != NODETYPE_TUPLE_ACCESS)))
         {
             fprintf(stderr, "Error: Type Mismatch. Expected Integer\n");
             exit(1);
