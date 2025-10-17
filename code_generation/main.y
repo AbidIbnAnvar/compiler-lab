@@ -13,6 +13,7 @@
     extern char *yytext; 
     void yyerror(char* s);
     struct tnode* head = NULL;
+    struct TypeTable* t = NULL; 
     FILE* yyin;
 %}
 
