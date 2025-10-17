@@ -7,8 +7,9 @@ decl
     int abc;
     str getName(tuple student(str name, int roll_no) *s);
     int getRollNo(tuple student(str name, int roll_no) s);
-    int add(tuple student(str name, int roll_no) s,tuple student(str name, int roll_no)t);
-    tuple student(str name, int roll_no) getCopy(tuple student(str name, int roll_no) a);
+    int swap(int *a, int *b);
+    int diff(int a, int b);
+    int l, m;
     int arr[20];
 enddecl
 
@@ -36,28 +37,35 @@ int getRollNo(tuple student(str name, int roll_no) s)
     end
 }
 
-int add(tuple student(str name, int roll_no) s,tuple student(str name, int roll_no) t)
+int swap(int* a, int *b)
+{
+    begin
+        *a = (*a)+(*b);
+        *b = (*a)-(*b);
+        *a = (*a)-(*b);
+        return 0;
+    end
+}
+
+int diff(int a, int b)
 {
     decl
-        int sum;
+        int res;
     enddecl
     begin
-        sum = s.roll_no + t.roll_no;
-        return sum;
+        res = a-b;
+        return res;
     end
 }
 
 int main() {
+    decl
+        int difference;
+    enddecl
     begin
         read(a.name);
         read(a.roll_no);
-        read(b.name);
-        read(b.roll_no);
-        print(getName(&a));
         print(getRollNo(a));
-        print(getName(&b));
-        print(getRollNo(b));
-        print(add(a,b));
         return 0;
     end
 }
