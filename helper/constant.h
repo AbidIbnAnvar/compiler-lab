@@ -10,7 +10,8 @@ typedef enum Type
     TYPE_INT,
     TYPE_STR,
     TYPE_PTR,
-    TYPE_TUPLE
+    TYPE_TUPLE,
+    TYPE_USR_DEF
 } Type;
 
 typedef enum NodeType
@@ -56,8 +57,9 @@ union constant
 
 typedef struct TypeTable
 {
-    Type type; // variable's type
-    Type base; // variable's base type (for pointers)
+    char *name; // type name (for user defined variables)
+    Type type;  // variable's type
+    Type base;  // variable's base type (for pointers)
     int size;
     struct Field *field;
 } TypeTable;

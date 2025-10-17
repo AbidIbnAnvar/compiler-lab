@@ -13,7 +13,7 @@
     extern char *yytext; 
     void yyerror(char* s);
     struct tnode* head = NULL;
-    struct TypeTable* t = NULL; 
+    struct TypeTable* custom_types = NULL; 
     FILE* yyin;
 %}
 
@@ -41,6 +41,7 @@
 %token RETURN
 %token BRKP
 %token BEGINSTMT ENDSTMT
+%token BEGINTYPE ENDTYPE
 
 %type <node> expr Slist InputStmt Stmt OutputStmt AsgStmt FunctionCallStmt ReturnStmt BreakPointStmt
 %type <node> IfStmt WhileStmt 
@@ -50,7 +51,7 @@
 %type <symbolTable> VarList
 %type <symbolTable> GDeclList GDecl GidList Gid LDecList LDecl
 %type <dim> Dimlist DimDecl
-%type <typetable> Type
+%type <typetable> Type TypeList TypeDecl TypeItem TypeItemList
 %type <params> ParamList Param
 %type <args> ArgList
 
@@ -74,6 +75,52 @@
             head = $1;
         }
         ;
+
+TypeBlock: BEGINTYPE TypeList ENDTYPE {
+            custom_types = $2;
+        } 
+        | BEGINTYPE ENDTYPE {
+
+        }
+        | {
+            custom_types = NULL;
+        }
+        ;
+
+TypeList: TypeList TypeDecl {
+            TypeTable* curr = $1;
+            while(curr && curr->nex){
+                curr = curr->next;
+            }
+            curr->next = $2;
+        }
+        | TypeDecl {
+            $$ = $1;
+        }
+        ;
+
+TypeDecl: ID '{' TypeItemList '}'  {
+
+    }
+    ;
+
+TypeItemList: TypeItemList TypeItem {
+        
+    }
+    | TypeItem {
+
+    }
+    ;
+
+TypeItem: Type ID ';' {
+        
+    }
+    | Type MUL ID ';' {
+        
+    }
+    ;
+
+
 GDeclBlock: DECL GDeclList ENDDECL {
                 pushToScopeStack($2,&sstop);
                 SymbolTable* curr = $2;
@@ -256,6 +303,10 @@ Type : INT_TYPE {
             curr = curr->next;
         }
         $$ = createTypeTable(TYPE_TUPLE,TYPE_NULL,size,f);
+    }
+    | ID {
+        
+        $$ = createTypeTable(TYPE_USR_DEF,TYPE_NULL,);
     }
     ;
 

@@ -441,3 +441,7 @@ void popFromScopeStack(scopeStack **top)
         (*top)->next = NULL;
     }
 }
+
+TypeTable* searchForUserDefinedType(char* varname){
+    
+}

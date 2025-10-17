@@ -36,6 +36,8 @@ LETTER [a-zA-Z]
 "breakpoint" {return BRKP;}
 "begin" {return BEGINSTMT;}
 "end" {return ENDSTMT;}
+"type" {return BEGINTYPE;}
+"endtype" {return ENDTYPE;}
 
 "+" {return PLUS;}
 "-" {return MINUS;}
