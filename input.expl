@@ -1,63 +1,35 @@
+type
+  List
+  {
+    int data;
+    List next;
+  }
+  MarkList
+  {
+    int data;
+    List marks;
+    MarkList next;
+  }
+endtype
+
 decl
-    int *p, *q;
-    tuple student(
-        str name, 
-        int roll_no
-    ) a, b, c, *ptr;
-    int abc;
-    str getName(tuple student(str name, int roll_no) *s);
-    int getRollNo(tuple student(str name, int roll_no) s);
-    int add(tuple student(str name, int roll_no) s,tuple student(str name, int roll_no)t);
-    tuple student(str name, int roll_no) getCopy(tuple student(str name, int roll_no) a);
-    int arr[20];
+    List head;
+    MarkList mList;
 enddecl
 
-str getName(tuple student(str name, int roll_no) *s)
+int main()
 {
-    decl
-        str name;
-        tuple student(str name, int roll_no) a;
-    enddecl
-    begin
-        a = *s;
-        name = a.name;
-        return name;
-    end
-}
+  decl
+    int length, x;
+    List p, q;
+  enddecl
 
-int getRollNo(tuple student(str name, int roll_no) s)
-{
-    decl
-        int rollNo;
-    enddecl
-    begin
-        rollNo = s.roll_no;
-        return rollNo;
-    end
-}
-
-int add(tuple student(str name, int roll_no) s,tuple student(str name, int roll_no) t)
-{
-    decl
-        int sum;
-    enddecl
-    begin
-        sum = s.roll_no + t.roll_no;
-        return sum;
-    end
-}
-
-int main() {
-    begin
-        read(a.name);
-        read(a.roll_no);
-        read(b.name);
-        read(b.roll_no);
-        print(getName(&a));
-        print(getRollNo(a));
-        print(getName(&b));
-        print(getRollNo(b));
-        print(add(a,b));
-        return 0;
-    end
+  begin
+    mList.marks.data = 10;
+    print(mList.marks.data);
+    if (mList.marks.data > mList.next.marks.data) then
+        print("first student performed better in the first subject");
+    endif;
+    return 1;
+  end
 }

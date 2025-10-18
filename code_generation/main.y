@@ -1,5 +1,6 @@
 %{
-    #include<stdio.h>
+    
+    #include <stdio.h>
     #include <stdlib.h>
     #include "code_generator.h"
     #include "../interpreter/interpreter.h"
@@ -8,12 +9,10 @@
     #include "../helper/helper.h"
     #include <string.h>
 
-    extern int yylex();
-    extern int yylineno;
-    extern char *yytext; 
-    void yyerror(char* s);
+    // extern int yylex();
+    // extern int yylineno;
+    // extern char *yytext; 
     struct tnode* head = NULL;
-    struct TypeTable* custom_types = NULL; 
     FILE* yyin;
 %}
 
@@ -24,6 +23,7 @@
     struct dimNode* dim;
     struct paramList* params;
     struct argList* args;
+    struct Field* field;
 }
 
 
@@ -48,12 +48,14 @@
 %type <node> BreakStmt ContinueStmt
 %type <node> DoWhileStmt RepeatUntilStmt
 %type <node> FDefBlock MainBlock FDef
+%type <node> Field
 %type <symbolTable> VarList
 %type <symbolTable> GDeclList GDecl GidList Gid LDecList LDecl
 %type <dim> Dimlist DimDecl
-%type <typetable> Type TypeList TypeDecl TypeItem TypeItemList
+%type <typetable> Type TypeList TypeDecl TypeDeclStart 
 %type <params> ParamList Param
 %type <args> ArgList
+%type <field> TypeItem TypeItemList
 
 %left OR
 %left AND
@@ -65,22 +67,24 @@
 
 %%
 
- Program : GDeclBlock FDefBlock MainBlock{
-            head = createTree(0,NULL,createTypeTable(TYPE_NULL,TYPE_NULL,0,NULL),NULL,NODETYPE_CONNECTOR,$2,NULL,$3,NULL);
+ Program : TypeBlock GDeclBlock FDefBlock MainBlock{
+            head = createTree(0,NULL,createTypeTable(TYPE_NULL,TYPE_NULL,0,NULL),NULL,NODETYPE_CONNECTOR,$3,NULL,$4,NULL);
         }
-        | GDeclBlock MainBlock{
+        | TypeBlock GDeclBlock MainBlock{
+            head = $3;
+        }
+        | TypeBlock MainBlock{
             head = $2;
-        }
-        | MainBlock{
-            head = $1;
         }
         ;
 
 TypeBlock: BEGINTYPE TypeList ENDTYPE {
-            custom_types = $2;
+            // custom_types = $2;
+            printf("User Defined Types:\n");
+            printCustomTypesTable();
         } 
         | BEGINTYPE ENDTYPE {
-
+            custom_types = NULL;
         }
         | {
             custom_types = NULL;
@@ -89,34 +93,58 @@ TypeBlock: BEGINTYPE TypeList ENDTYPE {
 
 TypeList: TypeList TypeDecl {
             TypeTable* curr = $1;
-            while(curr && curr->nex){
+            while(curr && curr->next){
                 curr = curr->next;
             }
-            curr->next = $2;
+            $$ = $1;
         }
         | TypeDecl {
             $$ = $1;
         }
         ;
 
-TypeDecl: ID '{' TypeItemList '}'  {
+TypeDecl: TypeDeclStart 
+     '{' TypeItemList '}'  {
+        $$ = $1;
+        $$->field = $3;
+        Field* f = $3;
+        int size = 0;
+        while(f){
+            size++;
+            f = f->next;
+        }
+        f = $3;
+        while(f){
+            if(f->typetable->name && strcmp(f->typetable->name,$$->name)==0){
+                f->typetable->size = size;
+            }
+            f = f->next;
+        }
+        $$->size = size;
+    }
+    ;
 
+TypeDeclStart: ID {
+        $$ = appendToCustomTypes(createTypeTable(TYPE_USR_DEF, TYPE_NULL, 0, NULL));
+        $$->name = strdup($1->varname);
     }
     ;
 
 TypeItemList: TypeItemList TypeItem {
-        
+        Field* curr = $1;
+        while(curr->next){
+            curr = curr->next;
+        }
+        curr->next = $2;
+        $$ = $1;
     }
     | TypeItem {
-
+        $$ = $1;
     }
     ;
 
 TypeItem: Type ID ';' {
-        
-    }
-    | Type MUL ID ';' {
-        
+        $$ = createField($1,$2->varname);
     }
     ;
 
@@ -305,8 +333,12 @@ Type : INT_TYPE {
         $$ = createTypeTable(TYPE_TUPLE,TYPE_NULL,size,f);
     }
     | ID {
-        
-        $$ = createTypeTable(TYPE_USR_DEF,TYPE_NULL,);
+        TypeTable* typetable = searchForUserDefinedType($1->varname);
+        if(!typetable){
+            yyerror("Custom type not found");
+        }
+        $$ = createTypeTable(TYPE_USR_DEF,TYPE_NULL,typetable->size,typetable->field);
+        $$->name = strdup($1->varname);
     }
     ;
 
@@ -434,6 +466,34 @@ VarList : VarList ',' ID {
         }
         ;
 
+Field: Field '.' ID {
+        SymbolTable* st = lookupEntry($1->STentry->name,sstop);
+        if(st->typetable->type!=TYPE_USR_DEF && st->typetable->type!=TYPE_TUPLE){
+            yyerror("Can't access variables field");
+        }
+        Field *field = getFieldFromType(st->typetable, $3->varname);
+        $$ = $1;
+        $$->typetable = field->typetable; 
+        $$->varname = $3->varname;
+        $$->STentry = st;
+        $$->val = $1->val + 1;
+        $$->nodetype=NODETYPE_FIELD_ACCESS;
+    }   
+    | ID '.' ID {
+        SymbolTable* st = lookupEntry($1->varname,sstop);
+        if(st->typetable->type!=TYPE_USR_DEF && st->typetable->type!=TYPE_TUPLE){
+            yyerror("Can't access variables field");
+        }
+        Field *field = getFieldFromType(st->typetable, $3->varname);
+        $$ = $1;
+        $$->typetable = field->typetable; 
+        $$->varname = $3->varname;
+        $$->STentry = st;
+        $$->val = 1;
+        $$->nodetype=NODETYPE_FIELD_ACCESS;
+    }
+    ;
+
 Slist : Slist Stmt {
             $$ = createTree(0,NULL,createTypeTable(TYPE_NULL,TYPE_NULL,0,NULL),NULL,NODETYPE_CONNECTOR,$1,NULL,$2,NULL);
         }
@@ -490,12 +550,15 @@ InputStmt : READ '(' ID ')' ';' {
             $3->dimNode = $4;
             $$ = createTree(0,NULL,TYPE_NULL,NULL,NODETYPE_READ,$3,NULL,NULL,NULL); 
         }
-        | READ '(' ID '.' ID ')' ';'{
+        /* | READ '(' ID '.' ID ')' ';'{
             // Fetch record containing the varname in the symbol table
             SymbolTable* st = lookupEntry($3->varname,sstop);
             TypeTable* fieldType = getFieldType(st->typetable->field,$5->varname);
             tnode* access = createTree(0,NULL,fieldType,$5->varname,NODETYPE_TUPLE_ACCESS,NULL,NULL,NULL,st);
             $$ = createTree(0,NULL,TYPE_NULL,NULL,NODETYPE_READ,access,NULL,NULL,NULL); 
+        } */
+        | READ '(' Field ')' ';' {
+            $$ = createTree(0,NULL,TYPE_NULL,NULL,NODETYPE_READ,$3,NULL,NULL,NULL);
         }
         ;
 
@@ -509,9 +572,9 @@ AsgStmt : ID '=' expr ';' {
             $1->STentry = st;
             $1->typetable = st->typetable;
             if(($1->typetable->type != $3->typetable->type)&&($1->typetable->type!=TYPE_PTR)){
-                fprintf(stderr,"Error: Trying to assign %s to %s\n",getType($3->typetable->type),getType($1->typetable->type));
-                yyerror("");
-                exit(1);
+                // fprintf(stderr,"Trying to assign %s to %s\n",getType($3->typetable->type),getType($1->typetable->type));
+                yyerror("Trying to assign %s to %s\n",getType($3->typetable->type),getType($1->typetable->type));
+                // exit(1);
             }
             $$ = createTree(0,"=",st->typetable,NULL,NODETYPE_OP_ASSIGNMENT,$1,NULL,$3,NULL);
         }
@@ -520,9 +583,9 @@ AsgStmt : ID '=' expr ';' {
             $1->STentry = st;
             $1->typetable = st->typetable;
             if($1->typetable->type != $4->typetable->type){
-                fprintf(stderr,"Error: Trying to assign %s to %s\n",getType($4->typetable->type),getType($1->typetable->type));
-                yyerror("");
-                exit(1);
+                // fprintf(stderr,"Trying to assign %s to %s\n",getType($4->typetable->type),getType($1->typetable->type));
+                yyerror("Trying to assign %s to %s\n",getType($4->typetable->type),getType($1->typetable->type));
+                // exit(1);
             }
             $1->nodetype = NODETYPE_ARRAY;
             $1->dimNode = $2;
@@ -533,18 +596,26 @@ AsgStmt : ID '=' expr ';' {
             $2->STentry = st;
             $2->typetable = st->typetable;
             if($2->typetable->base != $4->typetable->type){
-                fprintf(stderr,"Error: Trying to assign %s to %s\n",getType($4->typetable->type),getType($2->typetable->base));
-                yyerror("");
-                exit(1);
+                // fprintf(stderr,"Trying to assign %s to %s\n",getType($4->typetable->type),getType($2->typetable->base));
+                yyerror("Trying to assign %s to %s\n",getType($4->typetable->type),getType($2->typetable->base));
+                // exit(1);
             }
             tnode* left = createTree(0,"*",st->typetable,NULL,NODETYPE_ACCESS,$2,NULL,NULL,NULL);
             $$ = createTree(0,"=",st->typetable,NULL,NODETYPE_OP_ASSIGNMENT,left,NULL,$4,NULL);
         }
-        | ID '.' ID '=' expr ';' {
+        /* | ID '.' ID '=' expr ';' {
             SymbolTable* st = lookupEntry($1->varname,sstop);
             TypeTable* fieldType = getFieldType(st->typetable->field,$3->varname);
             tnode* left = createTree(0,NULL,fieldType,$3->varname,NODETYPE_TUPLE_ACCESS,NULL,NULL,NULL,st);
             $$ = createTree(0,"=",fieldType,NULL,NODETYPE_OP_ASSIGNMENT,left,NULL,$5,NULL);
+        } */
+        | Field '=' expr ';' {
+            SymbolTable* st = $1->STentry;
+            TypeTable* fieldType = getFieldType(st->typetable->field,$1->varname);
+            if(fieldType->type!=$3->typetable->type){
+                yyerror("Assignment of wrong type to field");
+            }
+            $$ = createTree(0,"=",fieldType,NULL,NODETYPE_OP_ASSIGNMENT,$1,NULL,$3,NULL);
         }
         ;
 
@@ -611,15 +682,13 @@ DimDecl: '[' NUM ']' DimDecl {
 
 Dimlist : '[' expr ']' Dimlist {
             if($2->typetable->type == TYPE_STR){
-                fprintf(stderr,"int type is required for indexing\n");
-                exit(1);
+                yyerror("int type is required for indexing");
             }
             $$ = addDimension($2->val,$2,$4);
         }   
         | '[' expr ']' {
             if($2->typetable->type == TYPE_STR){
-                fprintf(stderr,"int type is required for indexing\n");
-                exit(1);
+                yyerror("int type is required for indexing");
             }
             $$ = addDimension($2->val,$2,NULL);
         }
@@ -686,7 +755,7 @@ expr:
     | MUL ID {
         SymbolTable* st = lookupEntry($2->varname,sstop);
         if(st->typetable->type!=TYPE_PTR){
-            yyerror("Error: Trying to access non pointer values\n");
+            yyerror("Trying to access non pointer values");
             exit(1);
         }
         $2->STentry = st;
@@ -696,8 +765,9 @@ expr:
     | '&' ID {
         SymbolTable* st = lookupEntry($2->varname,sstop);
         if(st->typetable->type==TYPE_PTR){
-            fprintf(stderr,"Error: Trying to reference a pointer\n");
-            exit(1);
+            // fprintf(stderr,"Trying to reference a pointer\n");
+            // exit(1);
+            yyerror("Trying to reference a pointer");
         }
         $2->STentry = st;
         $2->typetable = st->typetable;
@@ -714,10 +784,13 @@ expr:
         $$ = createTree(0,NULL,st->typetable,$1->varname,NODETYPE_FUNC_CALL,NULL,NULL,NULL,st);
         $$->argList = $3;
     }
-    | ID '.' ID {
+    /* | ID '.' ID {
         SymbolTable* st = lookupEntry($1->varname,sstop);
         TypeTable* fieldType = getFieldType(st->typetable->field,$3->varname);
         $$ = createTree(0,NULL,fieldType,$3->varname,NODETYPE_TUPLE_ACCESS,NULL,NULL,NULL,st);
+    } */
+    | Field {
+        $$ = $1;
     }
     | ID {
         SymbolTable* st = lookupEntry($1->varname,sstop);
@@ -735,14 +808,17 @@ expr:
 
 %%
 
-void yyerror(char *s) {
-    fprintf(stderr,
-        "Syntax error: %s at line %d near '%s'\n",
-        s,
-        yylloc.first_line,
-        yytext
-    );
-}
+/* void yyerror(const char *fmt, ...) {
+    va_list args;
+    va_start(args, fmt);
+
+    fprintf(stderr, "Syntax error at line %d near '%s': ", yylloc.first_line, yytext);
+    vfprintf(stderr, fmt, args);
+    fprintf(stderr, "\n");
+
+    va_end(args);
+    exit(1);
+} */
 
 void code_generate(){
     codegen_generate_header();

@@ -253,6 +253,8 @@ const char *nodetype_to_string(NodeType nodetype)
         return "BRKP";
     case NODETYPE_TUPLE_ACCESS:
         return "TUPLE_ACCESS";
+    case NODETYPE_FIELD_ACCESS:
+        return "FIELD_ACCESS";
     default:
         return "UNKNOWN";
     }
@@ -261,4 +263,17 @@ const char *nodetype_to_string(NodeType nodetype)
 int max(int a, int b)
 {
     return (a > b) ? a : b;
+}
+
+void yyerror(const char *fmt, ...)
+{
+    va_list args;
+    va_start(args, fmt);
+
+    fprintf(stderr, "Syntax error at line %d near '%s': ", yylloc.first_line, yytext);
+    vfprintf(stderr, fmt, args);
+    fprintf(stderr, "\n");
+
+    va_end(args);
+    exit(1);
 }

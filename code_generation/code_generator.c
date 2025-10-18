@@ -68,7 +68,7 @@ reg_index codegen(tnode *t, int startLabel, int endLabel)
                     codegen_store_in_stack(r, st1->binding, st1->scope);
                 }
                 // Assigning tuple to tuple
-                else if (st1->typetable->field && st2->typetable->field)
+                else if (st1->typetable->field && st2 && st2->typetable->field)
                 {
                     Field *f = st1->typetable->field;
                     reg_index r0 = get_register();

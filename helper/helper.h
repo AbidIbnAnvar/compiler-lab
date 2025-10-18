@@ -4,6 +4,11 @@
 #include "../tree/tree.h"
 #include <stdbool.h>
 #include <string.h>
+#include <stdarg.h>
+
+extern int yylex();
+extern int yylineno;
+extern char *yytext;
 
 bool isLeafNode(tnode *t);
 bool isConnectorNode(tnode *t);
@@ -42,5 +47,6 @@ const char *type_to_string(Type type);
 const char *nodetype_to_string(NodeType nodetype);
 
 int max(int a, int b);
+void yyerror(const char *fmt, ...);
 
 #endif

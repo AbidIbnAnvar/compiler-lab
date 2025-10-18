@@ -40,7 +40,8 @@ typedef enum NodeType
     NODETYPE_FUNC_CALL,
     NODETYPE_RETURN,
     NODETYPE_BRKP,
-    NODETYPE_TUPLE_ACCESS
+    NODETYPE_TUPLE_ACCESS,
+    NODETYPE_FIELD_ACCESS
 } NodeType;
 
 typedef enum Scope
@@ -62,6 +63,7 @@ typedef struct TypeTable
     Type base;  // variable's base type (for pointers)
     int size;
     struct Field *field;
+    struct TypeTable *next;
 } TypeTable;
 
 typedef struct Field
@@ -79,7 +81,7 @@ typedef struct tnode
     char *op;                    // operator symbol (for arithmetic operations)
     char *varname;               // variable name
     NodeType nodetype;           // to know info about node
-    struct SymbolTable *STentry; // not used
+    struct SymbolTable *STentry; // for symbol table entry
     struct SymbolTable *Lentry;  // Local Entry (for functions)
     struct dimNode *dimNode;     // for accessing dimensions (for arrays)
     struct argList *argList;

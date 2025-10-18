@@ -4,6 +4,7 @@ scopeStack *sstop = NULL;
 int nextBinding = 4096;
 int initialStackTop = 4095;
 int currentFLabel = 1;
+TypeTable *custom_types = NULL;
 
 SymbolTable *createEntry(char *name, TypeTable *typetable, int size, int flabel, Scope scope, dimNode *dimNode, paramList *paramList, SymbolTable *next)
 {
@@ -46,8 +47,9 @@ SymbolTable *lookupEntry(char *name, scopeStack *top)
         }
         curr = curr->prev;
     }
-    fprintf(stderr, "Error: variable %s not declared\n", name);
-    exit(1);
+    // fprintf(stderr, "variable %s not declared\n", name);
+    // exit(1);
+    yyerror("variable %s not declared\n", name);
 
     return NULL;
 }
@@ -132,7 +134,7 @@ void checkparams(paramList *decl, paramList *def, char *fname)
     {
         if (decl->typetable->type != def->typetable->type)
         {
-            fprintf(stderr, "Error: Invalid Parameter for %s()\n", fname);
+            fprintf(stderr, "Invalid Parameter for %s()\n", fname);
             exit(1);
         }
         decl = decl->next;
@@ -140,7 +142,7 @@ void checkparams(paramList *decl, paramList *def, char *fname)
     }
     if ((!decl && def) || (decl && !def))
     {
-        fprintf(stderr, "Error: Invalid Parameter for %s()\n", fname);
+        fprintf(stderr, "Invalid Parameter for %s()\n", fname);
         exit(1);
     }
 }
@@ -151,7 +153,7 @@ void checkargs(argList *args, paramList *params, char *fname)
     {
         if (args->node->typetable->type != params->typetable->type)
         {
-            fprintf(stderr, "Error: Invalid Argument for %s()\n", fname);
+            fprintf(stderr, "Invalid Argument for %s()\n", fname);
             exit(1);
         }
         args = args->next;
@@ -159,7 +161,7 @@ void checkargs(argList *args, paramList *params, char *fname)
     }
     if ((args && !params) || (!args && params))
     {
-        fprintf(stderr, "Error: Invalid Argument for %s()\n", fname);
+        fprintf(stderr, "Invalid Argument for %s()\n", fname);
         exit(1);
     }
 }
@@ -222,6 +224,8 @@ char *getType(int type)
         return "ptr";
     case TYPE_TUPLE:
         return "tuple";
+    case TYPE_USR_DEF:
+        return "usr";
     default:
         return "-";
     }
@@ -277,14 +281,16 @@ Field *createField(TypeTable *typetable, char *name)
     node->next = NULL;
     return node;
 }
-// TODO: Add size to type table
+
 TypeTable *createTypeTable(Type type, Type base, int size, Field *field)
 {
     TypeTable *node = (TypeTable *)malloc(sizeof(TypeTable));
+    node->name = NULL;
     node->type = type;
     node->base = base;
     node->size = size;
     node->field = field;
+    node->next = NULL;
     return node;
 }
 
@@ -330,7 +336,7 @@ SymbolTable *convertParamListToSymbolTable(paramList *plist)
     {
         if (existsInSymbolTable(head, plist->name))
         {
-            fprintf(stderr, "Error: Duplicate parameter name '%s'\n", plist->name);
+            fprintf(stderr, "Duplicate parameter name '%s'\n", plist->name);
             exit(1);
         }
         SymbolTable *node = (SymbolTable *)malloc(sizeof(SymbolTable));
@@ -376,7 +382,7 @@ Field *convertToField(paramList *p)
     {
         if (existsInParamList(head, p->name))
         {
-            fprintf(stderr, "Error: Duplicate parameter name '%s'\n", p->name);
+            fprintf(stderr, "Duplicate parameter name '%s'\n", p->name);
             exit(1);
         }
         Field *node = createField(p->typetable, p->name);
@@ -405,7 +411,22 @@ TypeTable *getFieldType(Field *field, char *name)
         }
         curr = curr->next;
     }
-    fprintf(stderr, "Error: Field %s not found\n", name);
+    fprintf(stderr, "Field %s not found\n", name);
+    exit(1);
+}
+
+Field *getFieldFromType(TypeTable *t, char *name)
+{
+    Field *curr = t->field;
+    while (curr)
+    {
+        if (strcmp(curr->name, name) == 0)
+        {
+            return curr;
+        }
+        curr = curr->next;
+    }
+    fprintf(stderr, "Field %s not found\n", name);
     exit(1);
 }
 
@@ -442,6 +463,59 @@ void popFromScopeStack(scopeStack **top)
     }
 }
 
-TypeTable* searchForUserDefinedType(char* varname){
-    
+TypeTable *searchForUserDefinedType(char *name)
+{
+    TypeTable *curr = custom_types;
+    while (curr)
+    {
+        if (curr->name && strcmp(curr->name, name) == 0)
+        {
+            return curr;
+        }
+        curr = curr->next;
+    }
+    return NULL;
+}
+
+TypeTable *appendToCustomTypes(TypeTable *typetable)
+{
+    if (custom_types)
+    {
+        TypeTable *curr = custom_types;
+        while (curr->next)
+        {
+            curr = curr->next;
+        }
+        curr->next = typetable;
+    }
+    else
+    {
+        custom_types = typetable;
+    }
+    return typetable;
+}
+
+void printCustomTypesTable()
+{
+    TypeTable *curr = custom_types;
+    printf("+----------------+--------+\n");
+    printf("| Name           | Size   |\n");
+    printf("+----------------+--------+\n");
+    while (curr != NULL)
+    {
+
+        // Adjust field widths as needed for your actual data
+        printf("| %-14s | %-4d   |\n",
+               curr->name, curr->size);
+        Field *f = curr->field;
+        while (f)
+        {
+            printf("| └─ %-11.11s | %-4d   |\n",
+                   f->name, f->typetable->size);
+            f = f->next;
+        }
+
+        curr = curr->next;
+    }
+    printf("+----------------+--------+\n");
 }

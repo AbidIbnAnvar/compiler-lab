@@ -87,7 +87,9 @@ extern int yydebug;
     RETURN = 293,
     BRKP = 294,
     BEGINSTMT = 295,
-    ENDSTMT = 296
+    ENDSTMT = 296,
+    BEGINTYPE = 297,
+    ENDTYPE = 298
   };
 #endif
 /* Tokens.  */
@@ -130,6 +132,8 @@ extern int yydebug;
 #define BRKP 294
 #define BEGINSTMT 295
 #define ENDSTMT 296
+#define BEGINTYPE 297
+#define ENDTYPE 298
 
 /* Value type.  */
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
@@ -143,8 +147,9 @@ union YYSTYPE
     struct dimNode* dim;
     struct paramList* params;
     struct argList* args;
+    struct Field* field;
 
-#line 148 "y.tab.h"
+#line 153 "y.tab.h"
 
 };
 typedef union YYSTYPE YYSTYPE;
