@@ -42,8 +42,9 @@
 %token BRKP
 %token BEGINSTMT ENDSTMT
 %token BEGINTYPE ENDTYPE
+%token ALLOC FREE INITIALIZE
 
-%type <node> expr Slist InputStmt Stmt OutputStmt AsgStmt FunctionCallStmt ReturnStmt BreakPointStmt
+%type <node> expr Slist InputStmt Stmt OutputStmt AsgStmt FunctionCallStmt ReturnStmt BreakPointStmt AllocStmt FreeStmt InitializeStmt
 %type <node> IfStmt WhileStmt 
 %type <node> BreakStmt ContinueStmt
 %type <node> DoWhileStmt RepeatUntilStmt
@@ -103,15 +104,19 @@ TypeList: TypeList TypeDecl {
         }
         ;
 
-TypeDecl: TypeDeclStart 
-     '{' TypeItemList '}'  {
+TypeDecl: TypeDeclStart '{' TypeItemList '}'  {
         $$ = $1;
         $$->field = $3;
         Field* f = $3;
         int size = 0;
         while(f){
+            f->offset = size;
+            // printf("%s:%d\n",f->name,f->offset);
             size++;
             f = f->next;
+        }
+        if(size>8){
+            yyerror("Maximum member fields limit (8) exceeded for type %s",$1->name);
         }
         f = $3;
         while(f){
@@ -352,26 +357,21 @@ LDeclBlock: DECL LDecList ENDDECL {
                 }
                 curr->next = $2;
             }
-            SymbolTable* curr = $2;
-            while(curr){
-                if(curr->typetable->field){
-                    int size = 0;
-                    Field* f = curr->typetable->field;
-                    while(f){
-                        size++;
-                        f = f->next;
-                    }
-                    curr->size = size;
-                    SymbolTable* temp = curr->next;
-                    while(temp){
-                        if(temp->flabel==-1){
-                            temp->binding = temp->binding + (size-1);
-                        }
-                        temp = temp->next;
-                    }
-                }
-                curr = curr->next;
-            }
+            // SymbolTable* curr = $2;
+            // while(curr){
+            //     if(curr->typetable->field){
+            //         if(curr->size=)
+            //         curr->size = 1;
+            //         // SymbolTable* temp = curr->next;
+            //         // while(temp){
+            //         //     // if(temp->flabel==-1){
+            //         //     //     temp->binding = temp->binding ;
+            //         //     // }
+            //         //     temp = temp->next;
+            //         // }
+            //     }
+            //     curr = curr->next;
+            // }
             showTable(sstop->symbolTable);
         } 
         | DECL ENDDECL {
@@ -400,20 +400,26 @@ LDecl: Type VarList ';' {
         while(curr){
             if(!curr->typetable || curr->typetable->type!=TYPE_PTR){
                 curr->typetable = $1;
+                // if user defined variable
                 if(curr->typetable->field){
-                    int size = 0;
-                    Field* f = curr->typetable->field;
-                    while(f){
-                        size++;
-                        f = f->next;
+                    // int size = 0;
+                    // Field* f = curr->typetable->field;
+                    // get size of field
+                    // while(f){
+                    //     size++;
+                    //     f = f->next;
+                    // }                    
+                    if(curr->size==1){
+                        curr->size = 1;
                     }
-                    curr->size = size;
-                    SymbolTable* temp = curr->next;
-                    while(temp){
-                        temp->binding = temp->binding + (size-1);
-                        temp = temp->next;
-                    }
+
+                    // SymbolTable* temp = curr->next;
+                    // while(temp){
+                    //     temp->binding = temp->binding + (size-1);
+                    //     temp = temp->next;
+                    // }
                 }
+                // printf("\n");
             }else if(curr->typetable && curr->typetable->type==TYPE_PTR){
                 curr->typetable->base = $1->type;
                 curr->typetable->size = max(curr->typetable->size,$1->size);
@@ -466,31 +472,89 @@ VarList : VarList ',' ID {
         }
         ;
 
-Field: Field '.' ID {
-        SymbolTable* st = lookupEntry($1->STentry->name,sstop);
-        if(st->typetable->type!=TYPE_USR_DEF && st->typetable->type!=TYPE_TUPLE){
-            yyerror("Can't access variables field");
+/* Field: Field '.' ID {
+        if($1->typetable->type!=TYPE_USR_DEF && $1->typetable->type!=TYPE_TUPLE)
+        {
+            yyerror("Can't access variables field: %s",$3->varname);
         }
-        Field *field = getFieldFromType(st->typetable, $3->varname);
-        $$ = $1;
-        $$->typetable = field->typetable; 
-        $$->varname = $3->varname;
-        $$->STentry = st;
-        $$->val = $1->val + 1;
-        $$->nodetype=NODETYPE_FIELD_ACCESS;
+        if ($1->typetable->field == NULL) {
+            yyerror("Type %s has no fields but was accessed.", $1->typetable->name);
+        }
+        Field *currField = getFieldFromType($1->typetable, $3->varname);
+        $$ = createTree(0,".",currField->typetable,NULL,NODETYPE_FIELD_ACCESS,$1,NULL,$3,$1->STentry);
     }   
     | ID '.' ID {
         SymbolTable* st = lookupEntry($1->varname,sstop);
-        if(st->typetable->type!=TYPE_USR_DEF && st->typetable->type!=TYPE_TUPLE){
-            yyerror("Can't access variables field");
+        if(st->typetable->type!=TYPE_USR_DEF && st->typetable->type!=TYPE_TUPLE)
+        {
+            yyerror("Can't access variables field: %s",$3->varname);
         }
+        printf("%s: HELLO\n",st->typetable->field->name);
         Field *field = getFieldFromType(st->typetable, $3->varname);
-        $$ = $1;
-        $$->typetable = field->typetable; 
-        $$->varname = $3->varname;
-        $$->STentry = st;
-        $$->val = 1;
-        $$->nodetype=NODETYPE_FIELD_ACCESS;
+        $$ = createTree(0,".",field->typetable,NULL,NODETYPE_FIELD_ACCESS,$1,NULL,$3,st);
+    }
+    ; */
+
+Field: Field '.' ID {
+        if($1->typetable->type!=TYPE_USR_DEF && $1->typetable->type!=TYPE_TUPLE)
+        {
+            yyerror("Can't access variables field: %s",$3->varname);
+        }
+
+        char* typeName = $1->typetable->name;
+        if (typeName == NULL) {
+            yyerror("Type has no name.");
+        }
+
+        TypeTable* masterType = searchForUserDefinedType(typeName);
+        if (!masterType) {
+             yyerror("Type %s not found.", typeName);
+        }
+
+        if (masterType->field == NULL) {
+            yyerror("Type %s has no fields but was accessed.", masterType->name);
+        }
+
+        int offset = 0;
+        Field* curr = masterType->field;
+        while(curr)
+        {
+            curr->offset = offset++;
+            curr = curr->next;
+        }
+        Field *currField = getFieldFromType(masterType, $3->varname);
+
+        $$ = createTree(currField->offset,".",currField->typetable,NULL,NODETYPE_FIELD_ACCESS,$1,NULL,$3,$1->STentry);
+    }   
+    | ID '.' ID {
+        SymbolTable* st = lookupEntry($1->varname,sstop);
+        if(st->typetable->type!=TYPE_USR_DEF && st->typetable->type!=TYPE_TUPLE)
+        {
+            yyerror("Can't access variables field: %s",$3->varname);
+        }
+
+        TypeTable* baseType = st->typetable;
+
+        TypeTable* masterType = searchForUserDefinedType(baseType->name);
+        if (!masterType) {
+             yyerror("Type %s not found.", baseType->name);
+        }
+
+        if (masterType->field == NULL) {
+            yyerror("Type %s has no fields.", masterType->name);
+        }
+
+        int offset = 0;
+        Field* curr = masterType->field;
+        while(curr)
+        {
+            curr->offset = offset++;
+            curr = curr->next;
+        }
+
+        Field *field = getFieldFromType(masterType, $3->varname);
+        
+        $$ = createTree(field->offset,".",field->typetable,NULL,NODETYPE_FIELD_ACCESS,$1,NULL,$3,st);
     }
     ;
 
@@ -531,6 +595,15 @@ Stmt : InputStmt {
             $$ = $1;
         }
         | BreakPointStmt {
+            $$ = $1;
+        }
+        | AllocStmt {
+            $$ = $1;
+        }
+        | FreeStmt {
+            $$ = $1;
+        }
+        | InitializeStmt {
             $$ = $1;
         }
         ;
@@ -591,18 +664,6 @@ AsgStmt : ID '=' expr ';' {
             $1->dimNode = $2;
             $$ = createTree(0,"=",createTypeTable(TYPE_NULL,TYPE_NULL,0,NULL),NULL,NODETYPE_OP_ASSIGNMENT,$1,NULL,$4,NULL);
         }
-        | MUL ID '=' expr ';' {
-            SymbolTable* st = lookupEntry($2->varname,sstop);
-            $2->STentry = st;
-            $2->typetable = st->typetable;
-            if($2->typetable->base != $4->typetable->type){
-                // fprintf(stderr,"Trying to assign %s to %s\n",getType($4->typetable->type),getType($2->typetable->base));
-                yyerror("Trying to assign %s to %s\n",getType($4->typetable->type),getType($2->typetable->base));
-                // exit(1);
-            }
-            tnode* left = createTree(0,"*",st->typetable,NULL,NODETYPE_ACCESS,$2,NULL,NULL,NULL);
-            $$ = createTree(0,"=",st->typetable,NULL,NODETYPE_OP_ASSIGNMENT,left,NULL,$4,NULL);
-        }
         /* | ID '.' ID '=' expr ';' {
             SymbolTable* st = lookupEntry($1->varname,sstop);
             TypeTable* fieldType = getFieldType(st->typetable->field,$3->varname);
@@ -610,12 +671,31 @@ AsgStmt : ID '=' expr ';' {
             $$ = createTree(0,"=",fieldType,NULL,NODETYPE_OP_ASSIGNMENT,left,NULL,$5,NULL);
         } */
         | Field '=' expr ';' {
-            SymbolTable* st = $1->STentry;
-            TypeTable* fieldType = getFieldType(st->typetable->field,$1->varname);
+            TypeTable* fieldType = $1->typetable;
             if(fieldType->type!=$3->typetable->type){
-                yyerror("Assignment of wrong type to field");
+                yyerror("Assignment of wrong type to field: %s to %s",getType($3->typetable->type),getType(fieldType->type));
             }
             $$ = createTree(0,"=",fieldType,NULL,NODETYPE_OP_ASSIGNMENT,$1,NULL,$3,NULL);
+        }
+        | Field '=' ALLOC '(' ')' ';' {
+            TypeTable* fieldType = $1->typetable;
+            tnode* right = createTree(0,NULL,createTypeTable(TYPE_NULL,TYPE_NULL,0,NULL),NULL,NODETYPE_ALLOC,NULL,NULL,NULL,NULL);
+            $$ = createTree(0,"=",fieldType,NULL,NODETYPE_OP_ASSIGNMENT,$1,NULL,right,NULL);
+        }
+        | ID '=' ALLOC '(' ')' ';'{
+            SymbolTable* st = lookupEntry($1->varname,sstop);
+            $1->STentry = st;
+            $1->typetable = st->typetable;
+            tnode* right = createTree(0,NULL,createTypeTable(TYPE_NULL,TYPE_NULL,0,NULL),NULL,NODETYPE_ALLOC,NULL,NULL,NULL,NULL);
+            $$ = createTree(0,NULL,createTypeTable(TYPE_NULL,TYPE_NULL,0,NULL),NULL,NODETYPE_OP_ASSIGNMENT,$1,NULL,right,NULL);
+        }
+        | MUL ID '=' ALLOC '(' ')' ';'{
+            SymbolTable* st = lookupEntry($2->varname,sstop);
+            $2->STentry = st;
+            $2->typetable = st->typetable;
+            tnode* left = createTree(0,"*",st->typetable,NULL,NODETYPE_ACCESS,$2,NULL,NULL,NULL);
+            tnode* right = createTree(0,NULL,createTypeTable(TYPE_NULL,TYPE_NULL,0,NULL),NULL,NODETYPE_ALLOC,NULL,NULL,NULL,NULL);
+            $$ = createTree(0,NULL,createTypeTable(TYPE_NULL,TYPE_NULL,0,NULL),NULL,NODETYPE_OP_ASSIGNMENT,left,NULL,right,NULL);
         }
         ;
 
@@ -663,15 +743,30 @@ FunctionCallStmt: ID '(' ArgList ')' ';' {
                 }
                 ;
 ReturnStmt: RETURN expr ';' {
-            $$ = createTree(0,NULL,TYPE_NULL,NULL,NODETYPE_RETURN,$2,NULL,NULL,NULL);
+            $$ = createTree(0,NULL,createTypeTable(TYPE_NULL,TYPE_NULL,0,NULL),NULL,NODETYPE_RETURN,$2,NULL,NULL,NULL);
         }
         ;
 
 BreakPointStmt: BRKP ';' {
-            $$ = createTree(0,NULL,TYPE_NULL,NULL,NODETYPE_BRKP,NULL,NULL,NULL,NULL);
+            $$ = createTree(0,NULL,createTypeTable(TYPE_NULL,TYPE_NULL,0,NULL),NULL,NODETYPE_BRKP,NULL,NULL,NULL,NULL);
             }
             ;
 
+AllocStmt: ALLOC '(' ')' ';' {
+    $$ = createTree(0,NULL,createTypeTable(TYPE_NULL,TYPE_NULL,0,NULL),NULL,NODETYPE_ALLOC,NULL,NULL,NULL,NULL);
+}
+FreeStmt: FREE '(' ID ')' ';' {
+        $$ = createTree(0,NULL,createTypeTable(TYPE_NULL,TYPE_NULL,0,NULL),NULL,NODETYPE_FREE,$3,NULL,NULL,NULL);
+    }
+    | FREE '(' Field ')' ';' {
+        $$ = createTree(0,NULL,createTypeTable(TYPE_NULL,TYPE_NULL,0,NULL),NULL,NODETYPE_FREE,$3,NULL,NULL,NULL);
+    }
+    ;
+
+InitializeStmt: INITIALIZE '(' ')' ';' {
+                $$ = createTree(0,NULL,createTypeTable(TYPE_NULL,TYPE_NULL,0,NULL),NULL,NODETYPE_INITIALIZE,NULL,NULL,NULL,NULL);
+            }
+            ;
 DimDecl: '[' NUM ']' DimDecl {
                 $$ = addDimension($2->val,$2,$4);
             }
@@ -784,11 +879,6 @@ expr:
         $$ = createTree(0,NULL,st->typetable,$1->varname,NODETYPE_FUNC_CALL,NULL,NULL,NULL,st);
         $$->argList = $3;
     }
-    /* | ID '.' ID {
-        SymbolTable* st = lookupEntry($1->varname,sstop);
-        TypeTable* fieldType = getFieldType(st->typetable->field,$3->varname);
-        $$ = createTree(0,NULL,fieldType,$3->varname,NODETYPE_TUPLE_ACCESS,NULL,NULL,NULL,st);
-    } */
     | Field {
         $$ = $1;
     }
@@ -807,18 +897,6 @@ expr:
     ;
 
 %%
-
-/* void yyerror(const char *fmt, ...) {
-    va_list args;
-    va_start(args, fmt);
-
-    fprintf(stderr, "Syntax error at line %d near '%s': ", yylloc.first_line, yytext);
-    vfprintf(stderr, fmt, args);
-    fprintf(stderr, "\n");
-
-    va_end(args);
-    exit(1);
-} */
 
 void code_generate(){
     codegen_generate_header();

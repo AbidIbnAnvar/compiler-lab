@@ -57,6 +57,9 @@ void codegen_read_to_register(reg_index reg);
 void codegen_push_register(reg_index reg);
 void codegen_pop_register(reg_index reg);
 void codegen_call_exit();
+void codegen_initialize_heap();
+// void codegen_alloc();
+// void codegen_free();
 
 reg_index codegen_array(tnode *t);
 reg_index codegen_get_array_offset(dimNode *decl, dimNode *node);
@@ -64,5 +67,11 @@ reg_index codegen_get_array_offset(dimNode *decl, dimNode *node);
 reg_index codegen_function(tnode *t);
 reg_index codegen_function_call(tnode *t);
 reg_index codegen_main_function(tnode *t);
+
+reg_index codegen_alloc();
+// reg_index codegen_field(tnode *t, bool getVals);
+reg_index codegen_field_addr(tnode *t);
+reg_index codegen_field_val(tnode *t);
+void codegen_free(tnode *t);
 
 #endif

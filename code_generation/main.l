@@ -38,12 +38,16 @@ LETTER [a-zA-Z]
 "end" {return ENDSTMT;}
 "type" {return BEGINTYPE;}
 "endtype" {return ENDTYPE;}
+"alloc" {return ALLOC;}
+"free" {return FREE;}
+"initialize" {return INITIALIZE;}
 
 "+" {return PLUS;}
 "-" {return MINUS;}
 "*" {return MUL;}
 "/" {return DIV;}
 "%" {return MOD;}
+"//".* 
 
 "<" {return LT;}
 "<=" {return LE;}

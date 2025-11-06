@@ -47,8 +47,6 @@ SymbolTable *lookupEntry(char *name, scopeStack *top)
         }
         curr = curr->prev;
     }
-    // fprintf(stderr, "variable %s not declared\n", name);
-    // exit(1);
     yyerror("variable %s not declared\n", name);
 
     return NULL;
@@ -177,16 +175,16 @@ void showTable(SymbolTable *st)
     {
         // Adjust field widths as needed for your actual data
         printf("| %-14s | %-6s | %-6s | %-4d | %-7d | %-6d | %-6s |\n",
-               curr->name, getType(curr->typetable->type), getType(curr->typetable->base), curr->typetable->size, curr->binding, curr->flabel, (curr->scope == LOCAL ? "Local" : "Global"));
+               curr->name, getType(curr->typetable->type), getType(curr->typetable->base), curr->size, curr->binding, curr->flabel, (curr->scope == LOCAL ? "Local" : "Global"));
 
-        Field *f = curr->typetable->field;
-        int index = 0;
-        while (f != NULL)
-        {
-            printf("| └─ %-11.11s | %-6s | %-6s | %-4d | └─ %-4d | %-6d | %-6s |\n",
-                   f->name, getType(f->typetable->type), getType(f->typetable->base), 1, curr->binding + index++, -1, (curr->scope == LOCAL ? "Local" : "Global"));
-            f = f->next;
-        }
+        // Field *f = curr->typetable->field;
+        // int index = 0;
+        // while (f != NULL)
+        // {
+        //     printf("| └─ %-11.11s | %-6s | %-6s | %-4d | └─ %-4d | %-6d | %-6s |\n",
+        //            f->name, getType(f->typetable->type), getType(f->typetable->base), 1, curr->binding + index++, -1, (curr->scope == LOCAL ? "Local" : "Global"));
+        //     f = f->next;
+        // }
 
         curr = curr->next;
     }
@@ -227,7 +225,7 @@ char *getType(int type)
     case TYPE_USR_DEF:
         return "usr";
     default:
-        return "-";
+        return "null";
     }
 }
 
@@ -411,23 +409,67 @@ TypeTable *getFieldType(Field *field, char *name)
         }
         curr = curr->next;
     }
-    fprintf(stderr, "Field %s not found\n", name);
-    exit(1);
+    yyerror("Field %s not found\n", name);
 }
 
 Field *getFieldFromType(TypeTable *t, char *name)
 {
+    if (t == NULL)
+    {
+        yyerror("Internal Error: NULL type table pointer when finding field '%s'\n", name);
+        return NULL;
+    }
     Field *curr = t->field;
+
+    // // First, search directly in this type
+    // while (curr)
+    // {
+    //     if (strcmp(curr->name, name) == 0)
+    //         return curr;
+    //     curr = curr->next;
+    // }
+
+    // If not found, try to lookup user-defined type
+    if (t->name != NULL)
+    {
+        TypeTable *tt = searchForUserDefinedType(t->name);
+        if (tt != NULL)
+        {
+            curr = tt->field;
+            int offset = 0;
+            while (curr)
+            {
+
+                if (strcmp(curr->name, name) == 0)
+                    return curr;
+                curr = curr->next;
+            }
+        }
+    }
+    print_typetable(t);
+    printf("%s\n", name);
+    yyerror("Field %s not found in type '%s' '%s'\n", name, getType(t->type), t->name);
+}
+
+void print_typetable(TypeTable *t)
+{
+    printf("(%s,%s,%s,%s,%d)\n", getType(t->base), getType(t->type), t->name, t->field ? t->field->name : "(null)", t->size);
+}
+
+int getOffsetFromField(Field *f, char *name)
+{
+    Field *curr = f;
+    int offset = 0;
     while (curr)
     {
         if (strcmp(curr->name, name) == 0)
         {
-            return curr;
+            return offset;
         }
+        offset++;
         curr = curr->next;
     }
-    fprintf(stderr, "Field %s not found\n", name);
-    exit(1);
+    return -1;
 }
 
 int existsInSymbolTable(SymbolTable *head, char *name)

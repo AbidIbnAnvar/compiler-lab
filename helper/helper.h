@@ -35,6 +35,10 @@ bool isFuncCallNode(tnode *t);
 bool isBrkpNode(tnode *t);
 bool isReturnNode(tnode *t);
 bool isTupleAccessNode(tnode *t);
+bool isFieldAccessNode(tnode *t);
+bool isAllocNode(tnode *t);
+bool isFreeNode(tnode *t);
+bool isInitializeNode(tnode *t);
 
 bool matchesOperator(tnode *t, char *op);
 bool isRelationalOperator(tnode *t);

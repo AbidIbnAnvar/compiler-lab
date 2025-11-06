@@ -93,6 +93,10 @@ void print_tree_structure(tnode *root, char *prefix, int is_last, int is_root)
     {
         printf("val:%s ", root->strval);
     }
+    if (root->typetable && root->typetable->type == TYPE_NULL)
+    {
+        printf("val:%d ", root->val);
+    }
     printf("\n");
 
     // Count non-null children

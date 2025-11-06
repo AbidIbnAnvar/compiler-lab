@@ -89,7 +89,10 @@ extern int yydebug;
     BEGINSTMT = 295,
     ENDSTMT = 296,
     BEGINTYPE = 297,
-    ENDTYPE = 298
+    ENDTYPE = 298,
+    ALLOC = 299,
+    FREE = 300,
+    INITIALIZE = 301
   };
 #endif
 /* Tokens.  */
@@ -134,6 +137,9 @@ extern int yydebug;
 #define ENDSTMT 296
 #define BEGINTYPE 297
 #define ENDTYPE 298
+#define ALLOC 299
+#define FREE 300
+#define INITIALIZE 301
 
 /* Value type.  */
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
@@ -149,7 +155,7 @@ union YYSTYPE
     struct argList* args;
     struct Field* field;
 
-#line 153 "y.tab.h"
+#line 159 "y.tab.h"
 
 };
 typedef union YYSTYPE YYSTYPE;

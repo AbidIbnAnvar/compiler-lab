@@ -41,7 +41,10 @@ typedef enum NodeType
     NODETYPE_RETURN,
     NODETYPE_BRKP,
     NODETYPE_TUPLE_ACCESS,
-    NODETYPE_FIELD_ACCESS
+    NODETYPE_FIELD_ACCESS,
+    NODETYPE_ALLOC,
+    NODETYPE_FREE,
+    NODETYPE_INITIALIZE
 } NodeType;
 
 typedef enum Scope
@@ -69,6 +72,7 @@ typedef struct TypeTable
 typedef struct Field
 {
     char *name;
+    int offset;
     TypeTable *typetable;
     struct Field *next;
 } Field;
@@ -95,6 +99,7 @@ typedef struct SymbolTable
     int size;                    // variable size
     int binding;                 // variable binding in stack
     int flabel;                  // function's label
+    bool alloc;                  // whether a user-defined variable is alloced
     Scope scope;                 // scope of variable
     struct dimNode *dimNode;     // variable's declared dimension (for arrays)
     struct paramList *paramList; // for formal parameters (for functions)

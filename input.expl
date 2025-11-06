@@ -10,11 +10,19 @@ type
     List marks;
     MarkList next;
   }
+  Student
+  {
+    int age;
+    str name;
+    int roll_no;
+    Student next;
+  }
 endtype
 
 decl
     List head;
-    MarkList mList;
+    MarkList *mList;
+    Student student;
 enddecl
 
 int main()
@@ -22,14 +30,35 @@ int main()
   decl
     int length, x;
     List p, q;
+    Student arr[10];
+    int a[2];
   enddecl
 
   begin
-    mList.marks.data = 10;
-    print(mList.marks.data);
-    if (mList.marks.data > mList.next.marks.data) then
-        print("first student performed better in the first subject");
-    endif;
+    initialize();
+
+
+    student = alloc();
+    print(student);
+    student.name = "Hello";
+    student.age = 20;
+
+    arr[0] = student;
+    print(arr[0]);
+
+    student = alloc();
+    print(student);
+    student.name = "Hi";
+    student.age = 22;
+
+    arr[1] = student;
+    print(arr[1]);
+
+    student = arr[0];
+    print(student.name);
+    print(student.age);
+
+    
     return 1;
   end
 }

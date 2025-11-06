@@ -43,6 +43,7 @@ reg_index codegen(tnode *t, int startLabel, int endLabel)
                 reg_index r = codegen_evaluate_expression(t->right);
                 reg_index binding = codegen_array(leftNode);
                 codegen_store_in_stack_with_registers(r, binding);
+                // codegen_add_breakpoint();
                 return current_register;
             }
             // Assignment to pointer
@@ -56,20 +57,37 @@ reg_index codegen(tnode *t, int startLabel, int endLabel)
                 free_register();
                 return current_register;
             }
+            // Assignment to field
+            else if (isFieldAccessNode(leftNode))
+            {
+                reg_index r = codegen_field_addr(leftNode);
+                // codegen_add_breakpoint();
+                reg_index r1 = codegen_evaluate_expression(t->right);
+                fprintf(target_file, "MOV [R%d], R%d\n", r, r1);
+                return current_register;
+            }
+
             // Assignment to variable
             else
             {
                 SymbolTable *st1 = leftNode->STentry;
                 SymbolTable *st2 = t->right->STentry;
-                // Assigning function
-                if (t->right->nodetype == NODETYPE_FUNC_CALL)
+
+                // Assigning function or alloc
+                if (t->right->nodetype == NODETYPE_FUNC_CALL || t->right->nodetype == NODETYPE_ALLOC || t->right->nodetype == NODETYPE_ARRAY)
                 {
                     reg_index r = codegen_evaluate_expression(t->right);
                     codegen_store_in_stack(r, st1->binding, st1->scope);
                 }
+                // else if (isFieldAccessNode(leftNode))
+                // {
+                //     reg_index r = codegen_evaluate_expression(t->right);
+                //     codegen_store_in_stack(r, st1->binding, st1->scope);
+                // }
                 // Assigning tuple to tuple
                 else if (st1->typetable->field && st2 && st2->typetable->field)
                 {
+                    // TODO:
                     Field *f = st1->typetable->field;
                     reg_index r0 = get_register();
                     if (st1->scope == GLOBAL)
@@ -258,6 +276,11 @@ reg_index codegen(tnode *t, int startLabel, int endLabel)
             codegen_add_two_registers(r, off);
             codegen_read_from_stack_with_register(r);
         }
+        else if (isFieldAccessNode(t->left))
+        {
+            r = codegen_field_addr(t->left);
+            fprintf(target_file, "MOV R%d,[R%d]\n", r, r);
+        }
         codegen_print_register(r);
         return current_register;
     }
@@ -353,6 +376,16 @@ reg_index codegen(tnode *t, int startLabel, int endLabel)
     else if (isBrkpNode(t))
     {
         codegen_add_breakpoint();
+        return current_register;
+    }
+    else if (isFreeNode(t))
+    {
+        codegen_free(t);
+        return current_register;
+    }
+    else if (isInitializeNode(t))
+    {
+        codegen_initialize_heap();
         return current_register;
     }
     codegen(t->left, startLabel, endLabel);
@@ -463,6 +496,11 @@ reg_index codegen_evaluate_expression(tnode *t)
         codegen_read_from_stack_with_register(r);
         return current_register;
     }
+    else if (isAllocNode(t))
+    {
+        codegen_alloc();
+        return current_register;
+    }
 
     reg_index left_expression = codegen_evaluate_expression(t->left);
     reg_index right_expression = codegen_evaluate_expression(t->right);
@@ -476,7 +514,15 @@ reg_index codegen_array(tnode *t)
     SymbolTable *st = t->STentry;
     reg_index r = codegen_get_array_offset(st->dimNode, t->dimNode);
     reg_index binding = get_register();
-    codegen_set_int_value_to_register(binding, st->binding);
+    if (st->scope == LOCAL)
+    {
+        fprintf(target_file, "MOV R%d,BP\n", binding);
+        fprintf(target_file, "ADD R%d,%d\n", binding, st->binding);
+    }
+    else
+    {
+        codegen_set_int_value_to_register(binding, st->binding);
+    }
     codegen_add_two_registers(r, binding);
     return r;
 }
@@ -656,6 +702,127 @@ reg_index codegen_function_call(tnode *t)
         current_register = push_count;
     }
     return current_register;
+}
+
+reg_index codegen_alloc()
+{
+    // Push registers in reverse order to get the registers in order of popping
+    int push_count = 0;
+    for (int i = current_register; i >= 0; i--)
+    {
+        push_count++;
+        fprintf(target_file, "PUSH R%d\n", i);
+        free_register();
+    }
+
+    reg_index r0 = get_register();
+    fprintf(target_file, "MOV R%d, \"Alloc\"\n", r0);
+    codegen_push_register(r0);
+    fprintf(target_file, "MOV R%d, 8\n", r0);
+    codegen_push_register(r0);
+    codegen_push_register(r0);
+    codegen_push_register(r0);
+    codegen_push_register(r0);
+
+    fprintf(target_file, "CALL 0\n");
+
+    reg_index r1 = get_register();
+    codegen_pop_register(r1);
+    codegen_pop_register(r0);
+    codegen_pop_register(r0);
+    codegen_pop_register(r0);
+    codegen_pop_register(r0);
+    // Restoring registers
+    fprintf(target_file, "MOV R%d, R%d\n", push_count, r1);
+
+    for (int i = 0; i < push_count; i++)
+    {
+        codegen_pop_register(i);
+    }
+    // codegen_add_breakpoint();
+    current_register = push_count;
+    return current_register;
+}
+
+reg_index codegen_field_addr(tnode *t)
+{
+    tnode *left = t->left;
+    reg_index r;
+
+    if (left->nodetype == NODETYPE_FIELD_ACCESS)
+        r = codegen_field_val(left);
+    else
+    {
+        r = get_register();
+        SymbolTable *st = lookupEntry(left->varname, sstop);
+        fprintf(target_file, "MOV R%d,[%d]\n", r, st->binding);
+    }
+
+    int field_offset = t->val;
+    fprintf(target_file, "ADD R%d,%d\n", r, field_offset);
+
+    return r;
+}
+
+reg_index codegen_field_val(tnode *t)
+{
+    reg_index r = codegen_field_addr(t);
+
+    fprintf(target_file, "MOV R%d,[R%d]\n", r, r);
+
+    return r;
+}
+
+void codegen_free(tnode *t)
+{
+
+    // Push registers in reverse order to get the registers in order of popping
+    int push_count = 0;
+    for (int i = current_register; i >= 0; i--)
+    {
+        push_count++;
+        fprintf(target_file, "PUSH R%d\n", i);
+        free_register();
+    }
+
+    reg_index r0 = get_register();
+    fprintf(target_file, "MOV R%d, \"Free\"\n", r0);
+    codegen_push_register(r0);
+    reg_index r;
+    if (t->left->nodetype == NODETYPE_FIELD_ACCESS)
+    {
+        r = codegen_field_addr(t->left);
+    }
+    else
+    {
+        SymbolTable *st = lookupEntry(t->left->varname, sstop);
+        r = get_register();
+        fprintf(target_file, "MOV R%d, %d\n", r, st->binding);
+    }
+    fprintf(target_file, "MOV R%d, [R%d]\n", r, r);
+    codegen_push_register(r);
+    free_register();
+    codegen_push_register(r0);
+    codegen_push_register(r0);
+    codegen_push_register(r0);
+
+    fprintf(target_file, "CALL 0\n");
+
+    reg_index r1 = get_register();
+    codegen_pop_register(r1);
+    codegen_pop_register(r0);
+    codegen_pop_register(r0);
+    codegen_pop_register(r0);
+    codegen_pop_register(r0);
+    // Restoring registers
+    fprintf(target_file, "MOV R%d, R%d\n", push_count, r1);
+
+    for (int i = 0; i < push_count; i++)
+    {
+        codegen_pop_register(i);
+    }
+    // codegen_add_breakpoint();
+    current_register = push_count;
 }
 
 reg_index codegen_main_function(tnode *t)
@@ -1097,4 +1264,21 @@ void codegen_call_exit()
     fprintf(target_file, "PUSH R0\n");
     fprintf(target_file, "PUSH R0\n");
     fprintf(target_file, "CALL 0\n");
+}
+
+void codegen_initialize_heap()
+{
+    fprintf(target_file, "MOV R0,\"Heapset\"\n");
+    fprintf(target_file, "PUSH R0\n");
+    fprintf(target_file, "PUSH R0\n");
+    fprintf(target_file, "PUSH R0\n");
+    fprintf(target_file, "PUSH R0\n");
+    fprintf(target_file, "PUSH R0\n");
+    fprintf(target_file, "CALL 0\n");
+    fprintf(target_file, "POP R1\n");
+    fprintf(target_file, "POP R0\n");
+    fprintf(target_file, "POP R0\n");
+    fprintf(target_file, "POP R0\n");
+    fprintf(target_file, "POP R0\n");
+    // codegen_add_breakpoint();
 }

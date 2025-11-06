@@ -42,5 +42,7 @@ Field *getFieldFromType(TypeTable *t, char *name);
 TypeTable *searchForUserDefinedType(char *varname);
 TypeTable *appendToCustomTypes(TypeTable *typetable);
 void printCustomTypesTable();
+int getOffsetFromField(Field *f, char *name);
+void print_typetable(TypeTable *t);
 
 #endif

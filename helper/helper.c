@@ -127,6 +127,26 @@ bool isTupleAccessNode(tnode *t)
     return t && t->nodetype == NODETYPE_TUPLE_ACCESS;
 }
 
+bool isFieldAccessNode(tnode *t)
+{
+    return t && t->nodetype == NODETYPE_FIELD_ACCESS;
+}
+
+bool isAllocNode(tnode *t)
+{
+    return t && t->nodetype == NODETYPE_ALLOC;
+}
+
+bool isFreeNode(tnode *t)
+{
+    return t && t->nodetype == NODETYPE_FREE;
+}
+
+bool isInitializeNode(tnode *t)
+{
+    return t && t->nodetype == NODETYPE_INITIALIZE;
+}
+
 bool matchesOperator(tnode *t, char *op)
 {
     return t && t->op && (strcmp(t->op, op) == 0);
@@ -255,6 +275,12 @@ const char *nodetype_to_string(NodeType nodetype)
         return "TUPLE_ACCESS";
     case NODETYPE_FIELD_ACCESS:
         return "FIELD_ACCESS";
+    case NODETYPE_ALLOC:
+        return "ALLOC";
+    case NODETYPE_FREE:
+        return "FREE";
+    case NODETYPE_INITIALIZE:
+        return "INITIALIZE";
     default:
         return "UNKNOWN";
     }
